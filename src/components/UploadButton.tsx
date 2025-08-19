@@ -1,3 +1,4 @@
+
 import { useState, useRef, useCallback } from "react";
 import { Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,6 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
   const [uploadedItem, setUploadedItem] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const folderInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const uploadFilesToStorage = async (files: FileList, projectName: string) => {
@@ -104,17 +104,7 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
 
   const handleUploadClick = () => {
     if (isUploading) return;
-    
-    // Create a temporary input to let user choose between files or folder
-    const choice = confirm("Choose 'OK' for folder upload or 'Cancel' for file upload");
-    
-    if (choice) {
-      // Folder upload
-      folderInputRef.current?.click();
-    } else {
-      // File upload
-      fileInputRef.current?.click();
-    }
+    fileInputRef.current?.click();
   };
 
   return (
@@ -133,24 +123,15 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
         {isUploading ? "Uploading..." : "Upload Project"}
       </Button>
       
-      {/* Hidden file input for files */}
+      {/* Hidden file input for files and folders */}
       <input
         ref={fileInputRef}
-        type="file"
-        multiple
-        onChange={(e) => handleFileUpload(e.target.files)}
-        className="hidden"
-        accept=".js,.jsx,.ts,.tsx,.py,.java,.cpp,.c,.php,.rb,.go,.rs,.swift,.kt,.dart,.vue,.svelte,.html,.css,.scss,.sass,.less,.json,.xml,.yml,.yaml,.md,.txt,.zip,.tar,.tar.gz"
-      />
-      
-      {/* Hidden folder input */}
-      <input
-        ref={folderInputRef}
         type="file"
         multiple
         {...({ webkitdirectory: "" } as any)}
         onChange={(e) => handleFileUpload(e.target.files)}
         className="hidden"
+        accept=".js,.jsx,.ts,.tsx,.py,.java,.cpp,.c,.php,.rb,.go,.rs,.swift,.kt,.dart,.vue,.svelte,.html,.css,.scss,.sass,.less,.json,.xml,.yml,.yaml,.md,.txt,.zip,.tar,.tar.gz"
       />
       
       {uploadedItem && (
