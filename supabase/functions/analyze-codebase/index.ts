@@ -37,8 +37,15 @@ serve(async (req) => {
     }
 
     // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? 'https://wfywmkdqyuucxftpvmfj.supabase.co';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseKey) {
+      console.error('Missing SUPABASE_SERVICE_ROLE_KEY in edge function environment');
+      return new Response(JSON.stringify({ error: 'Server misconfiguration: missing service role key' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get project details
@@ -56,9 +63,10 @@ serve(async (req) => {
     }
 
     // List all files in the project folder
+    const listPath = (project.upload_path || '').replace(/^\/+|\/+$/g, '');
     const { data: files, error: filesError } = await supabase.storage
       .from('project-uploads')
-      .list(project.upload_path, {
+      .list(listPath, {
         limit: 100,
         offset: 0,
       });
@@ -75,25 +83,34 @@ serve(async (req) => {
     const fileAnalyses: FileAnalysis[] = [];
     
     for (const file of files || []) {
-      if (file.name && !file.name.includes('.') === false) { // Skip directories
-        try {
-          const { data: fileContent } = await supabase.storage
-            .from('project-uploads')
-            .download(`${project.upload_path}${file.name}`);
+      // Treat entries with metadata.size as files; folders don't include size
+      const meta: any = (file as any).metadata;
+      const isFile = meta && typeof meta.size === 'number';
+      if (!isFile) continue;
 
-          if (fileContent) {
-            const content = await fileContent.text();
-            const fileType = getFileType(file.name);
-            
-            fileAnalyses.push({
-              path: file.name,
-              content: content.substring(0, 8000), // Limit content for API
-              type: fileType
-            });
-          }
-        } catch (error) {
-          console.error(`Error downloading file ${file.name}:`, error);
+      try {
+        const fullPath = `${listPath}/${file.name}`.replace(/\/+/, '/');
+        const { data: fileContent, error: dlError } = await supabase.storage
+          .from('project-uploads')
+          .download(fullPath);
+
+        if (dlError) {
+          console.error(`Download error for ${fullPath}:`, dlError);
+          continue;
         }
+
+        if (fileContent) {
+          const content = await fileContent.text();
+          const fileType = getFileType(file.name);
+
+          fileAnalyses.push({
+            path: fullPath,
+            content: content.substring(0, 8000),
+            type: fileType,
+          });
+        }
+      } catch (error) {
+        console.error(`Error processing file ${file.name}:`, error);
       }
     }
 
@@ -153,7 +170,7 @@ Format your response as clear, professional markdown that project managers can e
     const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${claudeApiKey}`,
+        'x-api-key': claudeApiKey,
         'Content-Type': 'application/json',
         'anthropic-version': '2023-06-01',
       },
