@@ -21,27 +21,12 @@ const Navigation = () => {
             </span>
           </NavLink>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation - Empty for now */}
           <div className="hidden md:flex items-center space-x-8">
-            <NavLink 
-              to="/" 
-              className={({ isActive }) => 
-                `text-sm font-medium transition-colors hover:text-primary ${
-                  isActive ? 'text-primary' : 'text-muted-foreground'
-                }`
-              }
-            >
-              Home
-            </NavLink>
           </div>
 
-          {/* CTA Buttons */}
+          {/* CTA Buttons - Empty for now */}
           <div className="hidden md:flex items-center space-x-4">
-            <UploadButton variant="outline" size="sm" />
-            <Button variant="hero" size="sm">
-              <Github className="w-4 h-4 mr-2" />
-              Connect
-            </Button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -61,20 +46,7 @@ const Navigation = () => {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border/50">
             <div className="flex flex-col space-y-4">
-              <NavLink 
-                to="/" 
-                className="text-sm font-medium text-muted-foreground hover:text-primary"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Home
-              </NavLink>
-              <div className="flex flex-col space-y-2 pt-4">
-                <UploadButton variant="outline" size="sm" />
-                <Button variant="hero" size="sm">
-                  <Github className="w-4 h-4 mr-2" />
-                  Connect GitHub
-                </Button>
-              </div>
+              {/* Mobile menu content removed */}
             </div>
           </div>
         )}
