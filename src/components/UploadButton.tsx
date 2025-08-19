@@ -1,7 +1,8 @@
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, Loader2 } from "lucide-react";
+import { Upload, Loader2, FolderOpen, File } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -14,6 +15,7 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
   const [uploadedItem, setUploadedItem] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const uploadFilesToStorage = async (files: FileList, projectName: string) => {
@@ -102,30 +104,58 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
     }
   }, [toast]);
 
-  const handleUploadClick = () => {
+  const handleFileClick = () => {
     if (isUploading) return;
     fileInputRef.current?.click();
   };
 
+  const handleFolderClick = () => {
+    if (isUploading) return;
+    folderInputRef.current?.click();
+  };
+
   return (
     <div className="relative">
-      <Button 
-        variant={variant} 
-        size={size} 
-        onClick={handleUploadClick}
-        disabled={isUploading}
-      >
-        {isUploading ? (
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-        ) : (
-          <Upload className="w-4 h-4 mr-2" />
-        )}
-        {isUploading ? "Uploading..." : "Upload Project"}
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button 
+            variant={variant} 
+            size={size} 
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4 mr-2" />
+            )}
+            {isUploading ? "Uploading..." : "Upload Project"}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem onClick={handleFileClick}>
+            <File className="w-4 h-4 mr-2" />
+            Upload Files
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleFolderClick}>
+            <FolderOpen className="w-4 h-4 mr-2" />
+            Upload Folder
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       
-      {/* Hidden file input for files and folders */}
+      {/* Hidden file input for individual files */}
       <input
         ref={fileInputRef}
+        type="file"
+        multiple
+        onChange={(e) => handleFileUpload(e.target.files)}
+        className="hidden"
+        accept=".js,.jsx,.ts,.tsx,.py,.java,.cpp,.c,.php,.rb,.go,.rs,.swift,.kt,.dart,.vue,.svelte,.html,.css,.scss,.sass,.less,.json,.xml,.yml,.yaml,.md,.txt,.zip,.tar,.tar.gz"
+      />
+      
+      {/* Hidden folder input */}
+      <input
+        ref={folderInputRef}
         type="file"
         multiple
         {...({ webkitdirectory: "" } as any)}
