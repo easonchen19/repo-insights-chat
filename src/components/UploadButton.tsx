@@ -1,6 +1,6 @@
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, Loader2, FolderOpen, File } from "lucide-react";
+import { Upload, Loader2, FolderOpen, File, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +13,9 @@ interface UploadButtonProps {
 
 const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) => {
   const [uploadedItem, setUploadedItem] = useState<string | null>(null);
+  const [uploadedProjectId, setUploadedProjectId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -45,19 +47,23 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
     const totalSize = uploadedFiles.reduce((sum, file) => sum + file.size, 0);
     const uploadPath = `${projectName}/`;
     
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('projects')
       .insert({
         name: projectName,
         file_count: files.length,
         total_size: totalSize,
         upload_path: uploadPath
-      });
+      })
+      .select()
+      .single();
       
     if (error) {
       console.error('Failed to save project to database:', error);
       throw error;
     }
+    
+    return data;
   };
 
   const handleFileUpload = useCallback(async (files: FileList | null) => {
@@ -85,9 +91,10 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
       const uploadedFiles = await uploadFilesToStorage(files, projectName);
       
       // Save project metadata to database
-      await saveProjectToDatabase(projectName, files, uploadedFiles);
+      const project = await saveProjectToDatabase(projectName, files, uploadedFiles);
 
       setUploadedItem(projectName);
+      setUploadedProjectId(project.id);
       toast({
         title: "Upload successful",
         description: `You have uploaded "${projectName}" with ${files.length} file(s)`,
@@ -112,6 +119,35 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
   const handleFolderClick = () => {
     if (isUploading) return;
     folderInputRef.current?.click();
+  };
+
+  const handleAnalyzeCodebase = async () => {
+    if (!uploadedProjectId || isAnalyzing) return;
+
+    setIsAnalyzing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-codebase', {
+        body: { projectId: uploadedProjectId }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Analysis Complete",
+        description: `Successfully analyzed ${data.fileCount} files in ${uploadedItem}`,
+      });
+    } catch (error) {
+      console.error('Analysis error:', error);
+      toast({
+        title: "Analysis Failed",
+        description: "Failed to analyze the codebase. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   return (
@@ -165,8 +201,31 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
       />
       
       {uploadedItem && (
-        <div className="absolute top-full left-0 mt-2 text-sm text-accent font-medium whitespace-nowrap">
-          ✓ Uploaded: {uploadedItem}
+        <div className="absolute top-full left-0 mt-2 space-y-2">
+          <div className="text-sm text-accent font-medium whitespace-nowrap">
+            ✓ Uploaded: {uploadedItem}
+          </div>
+          {uploadedProjectId && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleAnalyzeCodebase}
+              disabled={isAnalyzing}
+              className="flex items-center gap-2"
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Brain className="w-4 h-4" />
+                  Analyze Codebase
+                </>
+              )}
+            </Button>
+          )}
         </div>
       )}
     </div>
