@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Code, Github, Upload, Menu, X } from "lucide-react";
+import { Code, Github, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavLink } from "react-router-dom";
+import UploadButton from "./UploadButton";
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -32,34 +33,11 @@ const Navigation = () => {
             >
               Home
             </NavLink>
-            <NavLink 
-              to="/upload" 
-              className={({ isActive }) => 
-                `text-sm font-medium transition-colors hover:text-primary ${
-                  isActive ? 'text-primary' : 'text-muted-foreground'
-                }`
-              }
-            >
-              Upload
-            </NavLink>
-            <NavLink 
-              to="/github" 
-              className={({ isActive }) => 
-                `text-sm font-medium transition-colors hover:text-primary ${
-                  isActive ? 'text-primary' : 'text-muted-foreground'
-                }`
-              }
-            >
-              GitHub
-            </NavLink>
           </div>
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="outline" size="sm">
-              <Upload className="w-4 h-4 mr-2" />
-              Upload
-            </Button>
+            <UploadButton variant="outline" size="sm" />
             <Button variant="hero" size="sm">
               <Github className="w-4 h-4 mr-2" />
               Connect
@@ -90,25 +68,8 @@ const Navigation = () => {
               >
                 Home
               </NavLink>
-              <NavLink 
-                to="/upload" 
-                className="text-sm font-medium text-muted-foreground hover:text-primary"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Upload
-              </NavLink>
-              <NavLink 
-                to="/github" 
-                className="text-sm font-medium text-muted-foreground hover:text-primary"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                GitHub
-              </NavLink>
               <div className="flex flex-col space-y-2 pt-4">
-                <Button variant="outline" size="sm">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Project
-                </Button>
+                <UploadButton variant="outline" size="sm" />
                 <Button variant="hero" size="sm">
                   <Github className="w-4 h-4 mr-2" />
                   Connect GitHub
