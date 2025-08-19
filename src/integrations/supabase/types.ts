@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      project_analyses: {
+        Row: {
+          analysis_report: string
+          created_at: string
+          file_count: number
+          id: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          analysis_report: string
+          created_at?: string
+          file_count?: number
+          id?: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          analysis_report?: string
+          created_at?: string
+          file_count?: number
+          id?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_analyses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string
