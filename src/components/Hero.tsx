@@ -1,6 +1,7 @@
-import { Github, Upload, Sparkles, Code, Brain, Zap } from "lucide-react";
+import { Github, Sparkles, Code, Brain, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import UploadButton from "@/components/UploadButton";
 
 const Hero = () => {
   return (
@@ -28,10 +29,8 @@ const Hero = () => {
         </p>
         
         <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
-          <Button variant="hero" size="lg" className="group">
-            <Upload className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-            Upload Project
-          </Button>
+          <UploadButton variant="hero" size="default" />
+          
           
           <Button variant="glow" size="lg" className="group">
             <Github className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
