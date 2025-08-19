@@ -1,10 +1,11 @@
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, Loader2, FolderOpen, File, Brain } from "lucide-react";
+import { Upload, Loader2, FolderOpen, File, Brain, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import CodebaseChatDialog from "@/components/CodebaseChatDialog";
 
 interface UploadButtonProps {
   variant?: "outline" | "hero";
@@ -16,6 +17,7 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
   const [uploadedProjectId, setUploadedProjectId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -206,27 +208,41 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
             ✓ Uploaded: {uploadedItem}
           </div>
           {uploadedProjectId && (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleAnalyzeCodebase}
-              disabled={isAnalyzing}
-              className="flex items-center gap-2"
-            >
-              {isAnalyzing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Brain className="w-4 h-4" />
-                  Analyze Codebase
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleAnalyzeCodebase}
+                disabled={isAnalyzing}
+                className="flex items-center gap-2"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Brain className="w-4 h-4" />
+                    Analyze Codebase
+                  </>
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setChatOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Chat with Codebase
+              </Button>
+            </div>
           )}
         </div>
+      )}
+      {uploadedProjectId && (
+        <CodebaseChatDialog projectId={uploadedProjectId} open={chatOpen} onOpenChange={setChatOpen} />
       )}
     </div>
   );

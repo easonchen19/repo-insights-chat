@@ -2,3 +2,6 @@ project_id = "wfywmkdqyuucxftpvmfj"
 
 [functions.analyze-codebase]
 verify_jwt = false
+
+[functions.code-chat]
+verify_jwt = false
