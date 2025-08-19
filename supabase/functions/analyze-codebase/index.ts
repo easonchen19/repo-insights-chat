@@ -1,0 +1,224 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+interface FileAnalysis {
+  path: string;
+  content: string;
+  type: 'component' | 'hook' | 'utility' | 'config' | 'style' | 'test' | 'other';
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { projectId } = await req.json();
+    
+    if (!projectId) {
+      return new Response(JSON.stringify({ error: 'Project ID is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const claudeApiKey = Deno.env.get('CLAUDE_API_KEY');
+    if (!claudeApiKey) {
+      return new Response(JSON.stringify({ error: 'Claude API key not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get project details
+    const { data: project, error: projectError } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', projectId)
+      .single();
+
+    if (projectError || !project) {
+      return new Response(JSON.stringify({ error: 'Project not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // List all files in the project folder
+    const { data: files, error: filesError } = await supabase.storage
+      .from('project-uploads')
+      .list(project.upload_path, {
+        limit: 100,
+        offset: 0,
+      });
+
+    if (filesError) {
+      console.error('Error listing files:', filesError);
+      return new Response(JSON.stringify({ error: 'Failed to list project files' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Download and analyze files
+    const fileAnalyses: FileAnalysis[] = [];
+    
+    for (const file of files || []) {
+      if (file.name && !file.name.includes('.') === false) { // Skip directories
+        try {
+          const { data: fileContent } = await supabase.storage
+            .from('project-uploads')
+            .download(`${project.upload_path}${file.name}`);
+
+          if (fileContent) {
+            const content = await fileContent.text();
+            const fileType = getFileType(file.name);
+            
+            fileAnalyses.push({
+              path: file.name,
+              content: content.substring(0, 8000), // Limit content for API
+              type: fileType
+            });
+          }
+        } catch (error) {
+          console.error(`Error downloading file ${file.name}:`, error);
+        }
+      }
+    }
+
+    // Prepare analysis prompt
+    const analysisPrompt = `You are a Senior Software Engineer with 20 years of experience. Analyze this codebase and provide a comprehensive report for project managers.
+
+PROJECT: ${project.name}
+FILES TO ANALYZE: ${fileAnalyses.length} files
+
+${fileAnalyses.map(file => `
+FILE: ${file.path} (${file.type})
+CONTENT:
+${file.content}
+---
+`).join('\n')}
+
+Please provide a detailed analysis report with the following sections:
+
+1. **EXECUTIVE SUMMARY** (for project managers)
+   - Project overview and purpose
+   - Technology stack assessment
+   - Overall code quality rating (1-10)
+   - Key risks and recommendations
+
+2. **ARCHITECTURE ANALYSIS**
+   - Application structure and patterns
+   - Component organization
+   - Data flow and state management
+   - API and backend integration
+
+3. **CODE QUALITY ASSESSMENT**
+   - Code organization and modularity
+   - Best practices adherence
+   - Potential technical debt
+   - Performance considerations
+
+4. **TECHNOLOGY STACK**
+   - Frontend technologies and versions
+   - Dependencies analysis
+   - Security considerations
+   - Upgrade recommendations
+
+5. **COMPONENT BREAKDOWN**
+   - Main components and their responsibilities
+   - Reusability assessment
+   - Coupling and cohesion analysis
+
+6. **RECOMMENDATIONS**
+   - Immediate action items
+   - Long-term improvements
+   - Team skills requirements
+   - Estimated effort for major changes
+
+Format your response as clear, professional markdown that project managers can easily understand.`;
+
+    // Call Claude API
+    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${claudeApiKey}`,
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: analysisPrompt
+        }]
+      }),
+    });
+
+    if (!claudeResponse.ok) {
+      const error = await claudeResponse.text();
+      console.error('Claude API error:', error);
+      return new Response(JSON.stringify({ error: 'Failed to analyze codebase' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const claudeData = await claudeResponse.json();
+    const analysis = claudeData.content[0].text;
+
+    // Store analysis in database
+    const { error: insertError } = await supabase
+      .from('project_analyses')
+      .insert({
+        project_id: projectId,
+        analysis_report: analysis,
+        file_count: fileAnalyses.length,
+        created_at: new Date().toISOString()
+      });
+
+    if (insertError) {
+      console.error('Error storing analysis:', insertError);
+    }
+
+    return new Response(JSON.stringify({ 
+      analysis,
+      fileCount: fileAnalyses.length,
+      projectName: project.name 
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    console.error('Error in analyze-codebase function:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});
+
+function getFileType(filename: string): FileAnalysis['type'] {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  
+  if (['tsx', 'jsx', 'vue', 'svelte'].includes(ext || '')) return 'component';
+  if (filename.includes('hook') || filename.startsWith('use')) return 'hook';
+  if (['js', 'ts', 'utils', 'helpers', 'lib'].includes(ext || '')) return 'utility';
+  if (['json', 'config', 'toml', 'yaml', 'yml'].includes(ext || '')) return 'config';
+  if (['css', 'scss', 'sass', 'less'].includes(ext || '')) return 'style';
+  if (filename.includes('test') || filename.includes('spec')) return 'test';
+  
+  return 'other';
+}
