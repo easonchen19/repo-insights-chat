@@ -155,23 +155,37 @@ const AnalysisReport = ({ projectId, projectName, onAnalysisComplete }: Analysis
       </Card>
 
       {/* Analysis Results */}
-      {analysis && (
+      {(isAnalyzing || analysis) && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-accent" />
               Analysis Report
+              {isAnalyzing && (
+                <Clock className="w-4 h-4 animate-spin text-muted-foreground" />
+              )}
             </CardTitle>
             <CardDescription>
-              Comprehensive engineering analysis and project management insights
+              {isAnalyzing 
+                ? "Generating comprehensive analysis..." 
+                : "Comprehensive engineering analysis and project management insights"
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="prose prose-sm max-w-none">
-              <div className="space-y-4 text-sm">
-                {formatAnalysis(analysis)}
+            {isAnalyzing && !analysis ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-muted-foreground">
+                  Analyzing codebase structure and generating insights...
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="prose prose-sm max-w-none">
+                <div className="space-y-4 text-sm">
+                  {formatAnalysis(analysis || '')}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
