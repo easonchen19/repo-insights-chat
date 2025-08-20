@@ -26,7 +26,6 @@ const GitHubConnect = () => {
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showRepositories, setShowRepositories] = useState(false);
   const [githubAccessToken, setGithubAccessToken] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<any>(null);
   const { toast } = useToast();
@@ -56,6 +55,8 @@ const GitHubConnect = () => {
       if (!error && profile?.github_access_token) {
         setIsConnected(true);
         setUserInfo({ username: profile.github_username });
+        // Automatically fetch repositories when connected
+        await fetchRepositories();
       } else {
         setIsConnected(false);
       }
@@ -220,7 +221,6 @@ const GitHubConnect = () => {
       setGithubAccessToken(null);
       setRepositories([]);
       setUserInfo(null);
-      setShowRepositories(false);
       
       toast({
         title: "Disconnected",
@@ -299,66 +299,6 @@ const GitHubConnect = () => {
     );
   }
 
-  if (!showRepositories) {
-    return (
-      <div className="min-h-screen pt-20 px-6">
-        <div className="max-w-2xl mx-auto text-center">
-          <div className="mb-12">
-            <h1 className="text-4xl font-bold mb-4 bg-gradient-primary bg-clip-text text-transparent">
-              GitHub Connected
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              Ready to explore your repositories
-            </p>
-          </div>
-
-          <Card className="p-12 bg-card/50 backdrop-blur-sm">
-            <div className="w-20 h-20 mx-auto mb-6 bg-gradient-primary rounded-full flex items-center justify-center">
-              <Github className="w-10 h-10 text-white" />
-            </div>
-            
-            <h3 className="text-2xl font-semibold mb-4">
-              Welcome {userInfo?.username || 'GitHub User'}!
-            </h3>
-            
-            <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-              Your GitHub account is now connected. Click below to load and browse your repositories.
-            </p>
-            
-            <div className="flex gap-4 justify-center">
-              <Button 
-                variant="hero" 
-                size="lg" 
-                onClick={() => {
-                  setShowRepositories(true);
-                  fetchRepositories();
-                }}
-                disabled={isLoading}
-                className="min-w-48"
-              >
-                {isLoading ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Loading...
-                  </div>
-                ) : (
-                  <>
-                    <Github className="w-5 h-5 mr-2" />
-                    List Projects
-                  </>
-                )}
-              </Button>
-              
-              <Button variant="outline" size="lg" onClick={handleDisconnect}>
-                Disconnect
-              </Button>
-            </div>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen pt-20 px-6">
       <div className="max-w-6xl mx-auto">
@@ -395,66 +335,76 @@ const GitHubConnect = () => {
           </div>
         </div>
 
-        <div className="grid gap-4">
-          {filteredRepos.map((repo) => (
-            <Card 
-              key={repo.id} 
-              className="p-6 hover:shadow-elegant transition-all duration-300 bg-card/50 backdrop-blur-sm"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-semibold flex items-center">
-                      {repo.name}
-                      {repo.private && (
-                        <span className="ml-2 text-xs bg-muted px-2 py-1 rounded">
-                          Private
-                        </span>
-                      )}
-                    </h3>
-                    <Button variant="ghost" size="sm">
-                      <ExternalLink className="w-4 h-4" />
+        {isLoading && repositories.length === 0 ? (
+          <Card className="p-12 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <h3 className="text-lg font-semibold mb-2">Loading repositories...</h3>
+            <p className="text-muted-foreground">
+              Fetching your GitHub repositories
+            </p>
+          </Card>
+        ) : (
+          <div className="grid gap-4">
+            {filteredRepos.map((repo) => (
+              <Card 
+                key={repo.id} 
+                className="p-6 hover:shadow-elegant transition-all duration-300 bg-card/50 backdrop-blur-sm"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-semibold flex items-center">
+                        {repo.name}
+                        {repo.private && (
+                          <span className="ml-2 text-xs bg-muted px-2 py-1 rounded">
+                            Private
+                          </span>
+                        )}
+                      </h3>
+                      <Button variant="ghost" size="sm">
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    
+                    <p className="text-muted-foreground mb-4">
+                      {repo.description}
+                    </p>
+                    
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 rounded-full bg-accent mr-2"></div>
+                        {repo.language}
+                      </div>
+                      <div className="flex items-center">
+                        <Star className="w-4 h-4 mr-1" />
+                        {repo.stars}
+                      </div>
+                      <div className="flex items-center">
+                        <Calendar className="w-4 h-4 mr-1" />
+                        Updated {repo.updatedAt}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button variant="outline">
+                      <GitBranch className="w-4 h-4 mr-2" />
+                      Branches
+                    </Button>
+                    <Button 
+                      variant="hero"
+                      onClick={() => handleAnalyzeRepo(repo)}
+                    >
+                      Analyze Code
                     </Button>
                   </div>
-                  
-                  <p className="text-muted-foreground mb-4">
-                    {repo.description}
-                  </p>
-                  
-                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 rounded-full bg-accent mr-2"></div>
-                      {repo.language}
-                    </div>
-                    <div className="flex items-center">
-                      <Star className="w-4 h-4 mr-1" />
-                      {repo.stars}
-                    </div>
-                    <div className="flex items-center">
-                      <Calendar className="w-4 h-4 mr-1" />
-                      Updated {repo.updatedAt}
-                    </div>
-                  </div>
                 </div>
-                
-                <div className="flex gap-2">
-                  <Button variant="outline">
-                    <GitBranch className="w-4 h-4 mr-2" />
-                    Branches
-                  </Button>
-                  <Button 
-                    variant="hero"
-                    onClick={() => handleAnalyzeRepo(repo)}
-                  >
-                    Analyze Code
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
 
-        {filteredRepos.length === 0 && searchTerm && (
+        {filteredRepos.length === 0 && searchTerm && !isLoading && (
           <Card className="p-12 text-center">
             <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">No repositories found</h3>
