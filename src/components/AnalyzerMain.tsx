@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import AnalysisReport from "./AnalysisReport";
+
 
 interface AnalysisItem {
   id: string;
@@ -124,24 +124,33 @@ export const AnalyzerMain = ({
     setAnalysis("");
 
     try {
-      const response = await supabase.functions.invoke('analyze-codebase', {
-        body: {
-          analysisId: currentAnalysis, // Use analysisId instead of projectId
+      // Use direct fetch to stream SSE from the edge function
+      const SUPABASE_URL = "https://wfywmkdqyuucxftpvmfj.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmeXdta2RxeXV1Y3hmdHB2bWZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NjkwNjEsImV4cCI6MjA3MTE0NTA2MX0.elHXCxBIqmz0IlcuOcKlY0gnIB88wK4rgbbpz9be244";
+      const authToken = (await supabase.auth.getSession()).data.session?.access_token;
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/analyze-codebase`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken || SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          analysisId: currentAnalysis,
           files: uploadedFiles.map(file => ({
             name: file.name,
             content: file.content || '',
             type: file.type
           })),
-          isDirectAnalysis: true // Flag to indicate this is direct file analysis
-        }
+          isDirectAnalysis: true
+        })
       });
 
-      if (!response.data) {
-        throw new Error('No response data');
+      if (!response.ok || !response.body) {
+        throw new Error('Failed to start analysis');
       }
 
-      // Handle streaming response
-      const reader = response.data.getReader();
+      const reader = response.body.getReader();
       const decoder = new TextDecoder();
 
       while (true) {
@@ -156,7 +165,7 @@ export const AnalyzerMain = ({
             try {
               const data = JSON.parse(line.slice(6));
               
-              if (data.type === 'content' && data.text) {
+              if (data.type === 'delta' && data.text) {
                 setAnalysis(prev => prev + data.text);
               } else if (data.type === 'complete') {
                 setIsAnalyzing(false);
