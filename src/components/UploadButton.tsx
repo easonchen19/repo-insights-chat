@@ -25,23 +25,34 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
   const { toast } = useToast();
 
   const uploadFilesToStorage = async (files: FileList, projectName: string) => {
-    const uploadPromises = Array.from(files).map(async (file) => {
-      const filePath = file.webkitRelativePath || file.name;
-      const fullPath = `${projectName}/${filePath}`;
+    const uploadPromises = Array.from(files).map(async (file, index) => {
+      const originalPath = file.webkitRelativePath || file.name;
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 8);
+      
+      // Create unique file path: projectName/timestamp_randomId_originalFileName
+      const fileName = originalPath.split('/').pop() || file.name;
+      const folderPath = originalPath.includes('/') ? originalPath.split('/').slice(0, -1).join('/') + '/' : '';
+      const uniqueFileName = `${timestamp}_${randomId}_${fileName}`;
+      const fullPath = `${projectName}/${folderPath}${uniqueFileName}`;
       
       const { error } = await supabase.storage
         .from('project-uploads')
         .upload(fullPath, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: true // Allow overwriting if needed
         });
       
       if (error) {
-        console.error(`Failed to upload ${filePath}:`, error);
+        console.error(`Failed to upload ${originalPath}:`, error);
         throw error;
       }
       
-      return { path: fullPath, size: file.size };
+      return { 
+        path: fullPath, 
+        originalPath: originalPath,
+        size: file.size 
+      };
     });
 
     return await Promise.all(uploadPromises);
