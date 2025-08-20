@@ -44,13 +44,47 @@ serve(async (req) => {
       throw new Error('Invalid token');
     }
 
-    const { action, accessToken, repo_owner, repo_name } = await req.json();
+    const { action, accessToken, repo_owner, repo_name, githubUserData } = await req.json();
+
+    if (action === 'saveGitHubConnection') {
+      // Save GitHub connection data to user profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          github_access_token: accessToken,
+          github_username: githubUserData.login,
+          github_user_id: githubUserData.id.toString(),
+          github_connected_at: new Date().toISOString()
+        });
+
+      if (updateError) {
+        throw new Error(`Failed to save GitHub connection: ${updateError.message}`);
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (action === 'fetchRepos') {
-      // Fetch user's repositories
+      // Get GitHub access token from user profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('github_access_token, github_username')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !profile?.github_access_token) {
+        throw new Error('GitHub account not connected. Please connect your GitHub account first.');
+      }
+
+      // Use stored access token instead of passed one for security
+      const storedAccessToken = profile.github_access_token;
+      // Fetch user's repositories using stored token
       const response = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated', {
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          'Authorization': `Bearer ${storedAccessToken}`,
           'Accept': 'application/vnd.github.v3+json',
           'User-Agent': 'SupabaseEdgeFunction'
         }
@@ -81,13 +115,47 @@ serve(async (req) => {
       });
     }
 
+    if (action === 'disconnectGitHub') {
+      // Remove GitHub connection data from user profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          github_access_token: null,
+          github_username: null,
+          github_user_id: null,
+          github_connected_at: null
+        })
+        .eq('id', user.id);
+
+      if (updateError) {
+        throw new Error(`Failed to disconnect GitHub: ${updateError.message}`);
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (action === 'fetchRepoContents') {
+      // Get GitHub access token from user profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('github_access_token')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !profile?.github_access_token) {
+        throw new Error('GitHub account not connected. Please connect your GitHub account first.');
+      }
+
+      const storedAccessToken = profile.github_access_token;
+
       // Fetch repository file structure for analysis
       const response = await fetch(
-        `https://api.github.com/repos/${repo_owner}/${repo_name}/git/trees/${await getDefaultBranch(accessToken, repo_owner, repo_name)}?recursive=1`,
+        `https://api.github.com/repos/${repo_owner}/${repo_name}/git/trees/${await getDefaultBranch(storedAccessToken, repo_owner, repo_name)}?recursive=1`,
         {
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
+            'Authorization': `Bearer ${storedAccessToken}`,
             'Accept': 'application/vnd.github.v3+json',
             'User-Agent': 'SupabaseEdgeFunction'
           }
@@ -116,7 +184,7 @@ serve(async (req) => {
               `https://api.github.com/repos/${repo_owner}/${repo_name}/contents/${file.path}`,
               {
                 headers: {
-                  'Authorization': `Bearer ${accessToken}`,
+                  'Authorization': `Bearer ${storedAccessToken}`,
                   'Accept': 'application/vnd.github.v3+json',
                   'User-Agent': 'SupabaseEdgeFunction'
                 }

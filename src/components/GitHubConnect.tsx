@@ -39,18 +39,72 @@ const GitHubConnect = () => {
       return;
     }
 
-    // Check if we have GitHub access token from OAuth
-    const urlParams = new URLSearchParams(window.location.search);
-    const accessToken = urlParams.get('access_token');
-    
-    if (accessToken) {
-      setGithubAccessToken(accessToken);
-      setIsConnected(true);
-      fetchRepositories(accessToken);
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    checkGitHubConnection();
   }, [user, navigate]);
+
+  const checkGitHubConnection = async () => {
+    if (!user) return;
+
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('github_access_token, github_username, github_connected_at')
+        .eq('id', user.id)
+        .single();
+
+      if (!error && profile?.github_access_token) {
+        setIsConnected(true);
+        setUserInfo({ username: profile.github_username });
+        // Fetch repositories from our edge function
+        await fetchRepositories();
+      } else {
+        setIsConnected(false);
+      }
+    } catch (error) {
+      console.error('Error checking GitHub connection:', error);
+      setIsConnected(false);
+    }
+  };
+
+  const fetchRepositories = async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      
+      const authToken = (await supabase.auth.getSession()).data.session?.access_token;
+      
+      const response = await supabase.functions.invoke('github-repos', {
+        body: {
+          action: 'fetchRepos'
+        },
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.repositories) {
+        setRepositories(response.data.repositories);
+        toast({
+          title: "Repositories loaded",
+          description: `Found ${response.data.repositories.length} repositories`,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error fetching repositories:', error);
+      toast({
+        title: "Failed to load repositories",
+        description: error.message || "Could not fetch GitHub repositories",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleConnect = async () => {
     if (!user) {
@@ -89,49 +143,9 @@ const GitHubConnect = () => {
     }
   };
 
-  const fetchRepositories = async (accessToken: string) => {
-    if (!user) return;
-    
-    try {
-      setIsLoading(true);
-      
-      const authToken = (await supabase.auth.getSession()).data.session?.access_token;
-      
-      const response = await supabase.functions.invoke('github-repos', {
-        body: {
-          action: 'fetchRepos',
-          accessToken: accessToken
-        },
-        headers: {
-          Authorization: `Bearer ${authToken}`
-        }
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      if (response.data?.repositories) {
-        setRepositories(response.data.repositories);
-        toast({
-          title: "Repositories loaded",
-          description: `Found ${response.data.repositories.length} repositories`,
-        });
-      }
-    } catch (error: any) {
-      console.error('Error fetching repositories:', error);
-      toast({
-        title: "Failed to load repositories",
-        description: error.message || "Could not fetch GitHub repositories",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleAnalyzeRepo = async (repo: Repository) => {
-    if (!githubAccessToken || !user) {
+    if (!user || !isConnected) {
       toast({
         title: "Not connected",
         description: "Please connect your GitHub account first",
@@ -149,7 +163,6 @@ const GitHubConnect = () => {
       const response = await supabase.functions.invoke('github-repos', {
         body: {
           action: 'fetchRepoContents',
-          accessToken: githubAccessToken,
           repo_owner: repo.full_name.split('/')[0],
           repo_name: repo.full_name.split('/')[1]
         },
@@ -184,15 +197,43 @@ const GitHubConnect = () => {
     }
   };
 
-  const handleDisconnect = () => {
-    setIsConnected(false);
-    setGithubAccessToken(null);
-    setRepositories([]);
-    setUserInfo(null);
-    toast({
-      title: "Disconnected",
-      description: "GitHub account disconnected successfully",
-    });
+  const handleDisconnect = async () => {
+    if (!user) return;
+    
+    try {
+      const authToken = (await supabase.auth.getSession()).data.session?.access_token;
+      
+      const response = await supabase.functions.invoke('github-repos', {
+        body: {
+          action: 'disconnectGitHub'
+        },
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      // Update local state
+      setIsConnected(false);
+      setGithubAccessToken(null);
+      setRepositories([]);
+      setUserInfo(null);
+      
+      toast({
+        title: "Disconnected",
+        description: "GitHub account disconnected successfully",
+      });
+    } catch (error: any) {
+      console.error('Error disconnecting GitHub:', error);
+      toast({
+        title: "Disconnect failed",
+        description: error.message || "Failed to disconnect GitHub account",
+        variant: "destructive"
+      });
+    }
   };
 
   const filteredRepos = repositories.filter(repo =>
@@ -274,7 +315,7 @@ const GitHubConnect = () => {
           <div className="flex items-center gap-4">
             <div className="flex items-center text-sm text-muted-foreground">
               <Github className="w-4 h-4 mr-2" />
-              Connected as username
+              Connected as {userInfo?.username || 'GitHub User'}
             </div>
             <Button variant="outline" size="sm" onClick={handleDisconnect}>
               Disconnect

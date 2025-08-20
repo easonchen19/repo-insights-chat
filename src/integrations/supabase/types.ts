@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          created_at: string
+          github_access_token: string | null
+          github_connected_at: string | null
+          github_user_id: string | null
+          github_username: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          github_access_token?: string | null
+          github_connected_at?: string | null
+          github_user_id?: string | null
+          github_username?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          github_access_token?: string | null
+          github_connected_at?: string | null
+          github_user_id?: string | null
+          github_username?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       project_analyses: {
         Row: {
           analysis_report: string
