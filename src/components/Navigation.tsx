@@ -1,5 +1,6 @@
+
 import { useState } from "react";
-import { Code, Github, Menu, X, FolderOpen, Brain, LogOut, User } from "lucide-react";
+import { Code, Github, Menu, X, FolderOpen, Brain, LogOut, User, Link, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,17 +9,129 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import UploadButton from "./UploadButton";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isGitHubConnected, setIsGitHubConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Check GitHub connection status when user changes
+  useState(() => {
+    const checkGitHubConnection = async () => {
+      if (!user) return;
+
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('github_access_token')
+          .eq('id', user.id)
+          .single();
+
+        if (!error && profile?.github_access_token) {
+          setIsGitHubConnected(true);
+        } else {
+          setIsGitHubConnected(false);
+        }
+      } catch (error) {
+        console.error('Error checking GitHub connection:', error);
+        setIsGitHubConnected(false);
+      }
+    };
+
+    checkGitHubConnection();
+  });
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/auth");
+  };
+
+  const handleGitHubConnect = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to connect your GitHub account",
+        variant: "destructive"
+      });
+      navigate('/auth');
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      // Sign in with GitHub OAuth through Supabase
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          scopes: 'repo read:user',
+          redirectTo: `${window.location.origin}/github`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error: any) {
+      console.error('GitHub OAuth error:', error);
+      toast({
+        title: "Connection failed",
+        description: error.message || "Failed to connect to GitHub",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+    }
+  };
+
+  const handleGitHubDisconnect = async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      const authToken = (await supabase.auth.getSession()).data.session?.access_token;
+      
+      const response = await supabase.functions.invoke('github-repos', {
+        body: {
+          action: 'disconnectGitHub'
+        },
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      // Update local state
+      setIsGitHubConnected(false);
+      
+      toast({
+        title: "Disconnected",
+        description: "GitHub account disconnected successfully",
+      });
+    } catch (error: any) {
+      console.error('Error disconnecting GitHub:', error);
+      toast({
+        title: "Disconnect failed",
+        description: error.message || "Failed to disconnect GitHub account",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -74,6 +187,18 @@ const Navigation = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
+                    {isGitHubConnected ? (
+                      <DropdownMenuItem onClick={handleGitHubDisconnect} disabled={isLoading}>
+                        <Unlink className="w-4 h-4 mr-2" />
+                        {isLoading ? 'Disconnecting...' : 'GitHub Disconnect'}
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem onClick={handleGitHubConnect} disabled={isLoading}>
+                        <Link className="w-4 h-4 mr-2" />
+                        {isLoading ? 'Connecting...' : 'GitHub Connect'}
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut}>
                       <LogOut className="w-4 h-4 mr-2" />
                       Sign Out
@@ -124,6 +249,29 @@ const Navigation = () => {
               {user ? (
                 <>
                   <UploadButton variant="outline" size="sm" />
+                  {isGitHubConnected ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGitHubDisconnect}
+                      disabled={isLoading}
+                      className="flex items-center gap-2 justify-start"
+                    >
+                      <Unlink className="w-4 h-4" />
+                      {isLoading ? 'Disconnecting...' : 'GitHub Disconnect'}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGitHubConnect}
+                      disabled={isLoading}
+                      className="flex items-center gap-2 justify-start"
+                    >
+                      <Link className="w-4 h-4" />
+                      {isLoading ? 'Connecting...' : 'GitHub Connect'}
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
