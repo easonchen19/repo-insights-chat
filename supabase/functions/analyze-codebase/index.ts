@@ -63,7 +63,7 @@ serve(async (req) => {
           const fileType = getFileType(file.name);
           fileAnalyses.push({
             path: file.name,
-            content: file.content.substring(0, 3000), // Reduced content size for rate limits
+            content: file.content.substring(0, 8000), // Limit content size
             type: fileType,
           });
         }
@@ -158,7 +158,7 @@ serve(async (req) => {
 
             fileAnalyses.push({
               path: fileInfo.fullPath,
-              content: content.substring(0, 3000), // Reduced content size for rate limits
+              content: content.substring(0, 8000),
               type: fileType,
             });
           }
@@ -177,116 +177,146 @@ serve(async (req) => {
       });
     }
 
-    // Streamlined analysis prompt to reduce token usage
-    const analysisPrompt = `Analyze this ${projectName} project (${fileAnalyses.length} files) for non-technical users who used AI to create it.
+    // Updated analysis prompt for non-technical users
+    const analysisPrompt = `You are a friendly Senior Software Engineer helping non-technical users understand their AI-generated code. Your audience includes beginners and junior developers who may have used AI to create this project but lack deep technical knowledge.
 
-FILES:
-${fileAnalyses.map(file => `${file.path} (${file.type}): ${file.content.substring(0, 800)}`).join('\n\n')}
+PROJECT: ${projectName}
+FILES TO ANALYZE: ${fileAnalyses.length} files
 
-Create a beginner-friendly report:
+${fileAnalyses.map(file => `
+FILE: ${file.path} (${file.type})
+CONTENT:
+${file.content}
+---
+`).join('\n')}
 
-# 🚀 PROJECT OVERVIEW
-- What this project does (simple terms)
-- Tech stack explanation (React, CSS, etc.)
-- Health score X/10 with reasoning
+Create a comprehensive but beginner-friendly report with these sections:
 
-# 📋 CODE ANALYSIS  
-- Main components and features
-- File organization
-- Potential issues in simple terms
+# 🚀 YOUR PROJECT OVERVIEW
 
-# 🎯 AI PROMPTING GUIDE
-## ✅ Good Prompts:
-- Be specific: "Add login form with email/password" not "add login"
-- Break down features: Do one thing at a time
-- Provide context: Which file, how it connects to existing code
+## What You Built
+Explain in simple terms what this project does, what kind of website/app it is, and what users can do with it. Use everyday language, not technical jargon.
 
-## ❌ Avoid:
-- Vague requests ("make it better")
-- Too many changes at once
-- Assuming AI knows your vision
+## Your Tech Stack (Simplified)
+List the main technologies used and explain each one in 1-2 simple sentences. For example:
+- "React: Think of this as the foundation that builds your website's interactive parts"
+- "Tailwind CSS: This makes your website look pretty with pre-designed styles"
 
-## Templates:
-- New page: "Create [page] that shows [content]. Add navigation link."
-- Modify: "On [page], change [element] to [behavior]"
-- Style: "Update [component] to look [description]"
+## Project Health Score: X/10
+Give an overall score and explain what this means in simple terms.
 
-# 🛠️ NEXT STEPS
-- Top 3 immediate priorities
-- Future feature suggestions
-- Learning resources
+# 📋 WHAT'S IN YOUR CODE
 
-Keep it simple, encouraging, and actionable!`;
+## Main Components
+List the key parts of your project and what each one does in simple language. Focus on the user-facing features.
 
-    // Call Claude API with rate limit handling
-    let claudeResponse;
-    let retryCount = 0;
-    const maxRetries = 3;
-    
-    while (retryCount <= maxRetries) {
-      try {
-        claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'x-api-key': claudeApiKey,
-            'Content-Type': 'application/json',
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 3000, // Reduced token limit
-            stream: true,
-            messages: [{
-              role: 'user',
-              content: analysisPrompt
-            }]
-          }),
-        });
+## File Organization
+Explain how your files are organized using simple analogies (like "think of folders as rooms in a house").
 
-        if (claudeResponse.ok) {
-          break; // Success, exit retry loop
-        }
+# ⚠️ THINGS TO WATCH OUT FOR
 
-        const errorData = await claudeResponse.text();
-        console.error('Claude API error:', errorData);
-        
-        // Check if it's a rate limit error
-        if (errorData.includes('rate_limit_error') && retryCount < maxRetries) {
-          const waitTime = Math.pow(2, retryCount) * 1000; // Exponential backoff
-          console.log(`Rate limited, waiting ${waitTime}ms before retry ${retryCount + 1}`);
-          await new Promise(resolve => setTimeout(resolve, waitTime));
-          retryCount++;
-          continue;
-        }
+## Potential Issues
+Identify any problems in simple terms and explain why they matter to a non-technical person.
 
-        // Return user-friendly error for rate limits
-        if (errorData.includes('rate_limit_error')) {
-          return new Response(JSON.stringify({ 
-            error: 'Analysis temporarily unavailable due to high demand. Please try again in a few minutes.' 
-          }), {
-            status: 429,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
+## Missing Pieces
+What important features or security measures might be missing?
 
-        return new Response(JSON.stringify({ error: 'Failed to analyze codebase' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+# 🎯 HOW TO ADD NEW FEATURES (AI PROMPTING GUIDE)
 
-      } catch (error) {
-        console.error('Network error:', error);
-        if (retryCount < maxRetries) {
-          retryCount++;
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-          continue;
-        }
-        
-        return new Response(JSON.stringify({ error: 'Network error occurred during analysis' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+This is the most important section! Teach users how to prompt AI effectively:
+
+## ✅ GOOD PROMPTING STRATEGIES
+
+### Be Specific and Clear
+- **Bad:** "Add a login"
+- **Good:** "Add a user login form with email and password fields that connects to the existing authentication system"
+
+### Break Down Big Features
+- **Bad:** "Build a complete e-commerce system"
+- **Good:** "First, add a product display page. Then we'll add a shopping cart. Finally, we'll add checkout."
+
+### Provide Context
+Always mention:
+- What file you want to modify
+- How it should work with existing features
+- What the user should see/experience
+
+### Example Good Prompts:
+1. "Add a contact form to the homepage with name, email, and message fields. When submitted, show a success message."
+2. "Create a user profile page where logged-in users can edit their name and profile picture."
+3. "Add a search bar to the navigation that filters the existing product list."
+
+## ❌ PROMPTING MISTAKES TO AVOID
+
+### Vague Requests
+- "Make it better" → Instead: "Improve the homepage layout by making the buttons larger and adding more spacing"
+- "Fix the bugs" → Instead: "The login button doesn't work when clicked - please fix the authentication"
+
+### Too Many Changes at Once
+- Don't ask for 10 features in one prompt
+- Make one change, test it, then ask for the next
+
+### Assuming AI Knows Your Vision
+- Don't say "you know what I mean"
+- Always describe exactly what you want to see
+
+## 🔄 ITERATIVE DEVELOPMENT TIPS
+
+1. **Start Small:** Add one feature at a time
+2. **Test Everything:** Check that each new feature works before adding more
+3. **Be Patient:** If something doesn't work, describe the specific error you see
+4. **Ask Questions:** If you don't understand something, ask the AI to explain it simply
+
+## 📝 PROMPT TEMPLATES YOU CAN USE
+
+### Adding a New Page:
+"Create a new [page name] page that shows [what content]. Add a navigation link to reach this page from the main menu."
+
+### Modifying Existing Features:
+"On the [page name] page, change the [specific element] to [desired behavior]. Make sure it still works with the existing [related feature]."
+
+### Styling Changes:
+"Update the [component name] to use [color/size/layout]. Keep the same functionality but make it look [describe desired appearance]."
+
+# 🛠️ NEXT STEPS & RECOMMENDATIONS
+
+## Immediate Priorities
+List 3-5 specific improvements they should make first, in order of importance.
+
+## Long-term Growth
+Suggest features they might want to add later as they learn more.
+
+## Learning Resources
+Recommend beginner-friendly resources to learn more about their tech stack.
+
+Remember: Write everything in simple, encouraging language. Avoid technical jargon. Use emojis and clear headings. Focus on empowering non-technical users to successfully work with AI to improve their projects.`;
+
+    // Call Claude API with streaming
+    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': claudeApiKey,
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        stream: true,
+        messages: [{
+          role: 'user',
+          content: analysisPrompt
+        }]
+      }),
+    });
+
+    if (!claudeResponse.ok) {
+      const error = await claudeResponse.text();
+      console.error('Claude API error:', error);
+      return new Response(JSON.stringify({ error: 'Failed to analyze codebase' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Create a readable stream to pass through Claude's streaming response

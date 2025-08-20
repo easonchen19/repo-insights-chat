@@ -486,8 +486,8 @@ export const AnalyzerMain = ({
           {/* Right Panel - Analysis Report */}
           <ResizablePanel defaultSize={60} minSize={40}>
             <div className="h-full p-6">
-              <Card className="h-full flex flex-col">
-                <div className="p-6 pb-0 flex-shrink-0">
+              <Card className="h-full">
+                <div className="p-6 h-full flex flex-col">
                   <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-accent" />
                     Analysis Report
@@ -495,32 +495,25 @@ export const AnalyzerMain = ({
                       <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin ml-2" />
                     )}
                   </h3>
-                </div>
-                
-                <div className="flex-1 overflow-y-auto px-6 pb-6">
-                  {isAnalyzing && !analysis ? (
-                    <div className="flex items-center justify-center h-64">
-                      <div className="text-center space-y-4">
-                        <div className="animate-pulse">
-                          <Sparkles className="w-12 h-12 text-primary mx-auto mb-4" />
-                        </div>
-                        <div className="text-muted-foreground">
-                          Analyzing codebase and generating insights...
+                  
+                  <div className="flex-1 overflow-y-auto">
+                    {isAnalyzing && !analysis ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center space-y-4">
+                          <div className="animate-pulse">
+                            <Sparkles className="w-12 h-12 text-primary mx-auto mb-4" />
+                          </div>
+                          <div className="text-muted-foreground">
+                            Analyzing codebase and generating insights...
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ) : analysis ? (
-                    <div className="space-y-4 min-h-full">
-                      {formatAnalysis(analysis)}
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center h-64 text-muted-foreground">
-                      <div className="text-center">
-                        <Sparkles className="w-12 h-12 mx-auto mb-4" />
-                        <p>Analysis report will appear here after processing</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {formatAnalysis(analysis || '')}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </Card>
             </div>
