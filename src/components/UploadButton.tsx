@@ -182,7 +182,7 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
   };
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full flex flex-col items-center justify-center min-h-[60vh] space-y-4">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button 
