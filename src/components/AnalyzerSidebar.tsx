@@ -40,7 +40,8 @@ export const AnalyzerSidebar = ({
   };
 
   const startNewAnalysis = () => {
-    const newId = `analysis-${Date.now()}`;
+    // Generate a proper UUID-like string for the analysis session
+    const newId = crypto.randomUUID();
     const newAnalysis = {
       id: newId,
       name: `New Analysis ${analysisHistory.length + 1}`,

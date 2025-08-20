@@ -126,12 +126,13 @@ export const AnalyzerMain = ({
     try {
       const response = await supabase.functions.invoke('analyze-codebase', {
         body: {
-          projectId: currentAnalysis,
+          analysisId: currentAnalysis, // Use analysisId instead of projectId
           files: uploadedFiles.map(file => ({
             name: file.name,
             content: file.content || '',
             type: file.type
-          }))
+          })),
+          isDirectAnalysis: true // Flag to indicate this is direct file analysis
         }
       });
 

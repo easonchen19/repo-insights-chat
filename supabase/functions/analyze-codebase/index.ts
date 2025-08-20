@@ -19,10 +19,13 @@ serve(async (req) => {
   }
 
   try {
-    const { projectId } = await req.json();
+    const { projectId, analysisId, files, isDirectAnalysis } = await req.json();
     
-    if (!projectId) {
-      return new Response(JSON.stringify({ error: 'Project ID is required' }), {
+    // Support both existing project analysis and direct file analysis
+    const targetId = analysisId || projectId;
+    
+    if (!targetId) {
+      return new Response(JSON.stringify({ error: 'Project ID or Analysis ID is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -48,107 +51,136 @@ serve(async (req) => {
     }
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get project details
-    const { data: project, error: projectError } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('id', projectId)
-      .single();
+    let fileAnalyses: FileAnalysis[] = [];
+    let projectName = 'Direct File Analysis';
 
-    if (projectError || !project) {
-      return new Response(JSON.stringify({ error: 'Project not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Recursively get all files from the project folder
-    const listPath = (project.upload_path || '').replace(/^\/+|\/+$/g, '');
-    
-    async function getAllFiles(path: string): Promise<{ name: string; fullPath: string; metadata: any }[]> {
-      const { data: items, error } = await supabase.storage
-        .from('project-uploads')
-        .list(path, {
-          limit: 1000,
-          offset: 0,
-        });
-
-      if (error) {
-        console.error(`Error listing files in ${path}:`, error);
-        return [];
-      }
-
-      const allFiles: { name: string; fullPath: string; metadata: any }[] = [];
+    if (isDirectAnalysis && files) {
+      // Handle direct file analysis (new analyzer page)
+      console.log(`Processing ${files.length} directly uploaded files`);
       
-      for (const item of items || []) {
-        const fullPath = path ? `${path}/${item.name}` : item.name;
-        const meta: any = (item as any).metadata;
-        const isFile = meta && typeof meta.size === 'number';
-        
-        if (isFile) {
-          // It's a file
-          allFiles.push({
-            name: item.name,
-            fullPath: fullPath,
-            metadata: meta
+      for (const file of files) {
+        if (file.content && file.content.trim()) {
+          const fileType = getFileType(file.name);
+          fileAnalyses.push({
+            path: file.name,
+            content: file.content.substring(0, 8000), // Limit content size
+            type: fileType,
           });
-        } else {
-          // It's a folder, recurse into it
-          const subFiles = await getAllFiles(fullPath);
-          allFiles.push(...subFiles);
         }
       }
       
-      return allFiles;
+      projectName = `Analysis Session ${new Date().toLocaleDateString()}`;
+    } else {
+      // Handle existing project analysis (original upload button)
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', projectId)
+        .single();
+
+      if (projectError || !project) {
+        return new Response(JSON.stringify({ error: 'Project not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      projectName = project.name;
+
+      // Recursively get all files from the project folder
+      const listPath = (project.upload_path || '').replace(/^\/+|\/+$/g, '');
+      
+      async function getAllFiles(path: string): Promise<{ name: string; fullPath: string; metadata: any }[]> {
+        const { data: items, error } = await supabase.storage
+          .from('project-uploads')
+          .list(path, {
+            limit: 1000,
+            offset: 0,
+          });
+
+        if (error) {
+          console.error(`Error listing files in ${path}:`, error);
+          return [];
+        }
+
+        const allFiles: { name: string; fullPath: string; metadata: any }[] = [];
+        
+        for (const item of items || []) {
+          const fullPath = path ? `${path}/${item.name}` : item.name;
+          const meta: any = (item as any).metadata;
+          const isFile = meta && typeof meta.size === 'number';
+          
+          if (isFile) {
+            // It's a file
+            allFiles.push({
+              name: item.name,
+              fullPath: fullPath,
+              metadata: meta
+            });
+          } else {
+            // It's a folder, recurse into it
+            const subFiles = await getAllFiles(fullPath);
+            allFiles.push(...subFiles);
+          }
+        }
+        
+        return allFiles;
+      }
+
+      const allFiles = await getAllFiles(listPath);
+      console.log(`Found ${allFiles.length} files in project ${project.name}`);
+
+      if (allFiles.length === 0) {
+        return new Response(JSON.stringify({ 
+          error: 'No files found in the uploaded project',
+          projectPath: listPath 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Download and analyze files
+      for (const fileInfo of allFiles) {
+        try {
+          const { data: fileContent, error: dlError } = await supabase.storage
+            .from('project-uploads')
+            .download(fileInfo.fullPath);
+
+          if (dlError) {
+            console.error(`Download error for ${fileInfo.fullPath}:`, dlError);
+            continue;
+          }
+
+          if (fileContent) {
+            const content = await fileContent.text();
+            const fileType = getFileType(fileInfo.name);
+
+            fileAnalyses.push({
+              path: fileInfo.fullPath,
+              content: content.substring(0, 8000),
+              type: fileType,
+            });
+          }
+        } catch (error) {
+          console.error(`Error processing file ${fileInfo.name}:`, error);
+        }
+      }
     }
 
-    const allFiles = await getAllFiles(listPath);
-    console.log(`Found ${allFiles.length} files in project ${project.name}`);
-
-    if (allFiles.length === 0) {
+    if (fileAnalyses.length === 0) {
       return new Response(JSON.stringify({ 
-        error: 'No files found in the uploaded project',
-        projectPath: listPath 
+        error: 'No files to analyze' 
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Download and analyze files
-    const fileAnalyses: FileAnalysis[] = [];
-    
-    for (const fileInfo of allFiles) {
-
-      try {
-        const { data: fileContent, error: dlError } = await supabase.storage
-          .from('project-uploads')
-          .download(fileInfo.fullPath);
-
-        if (dlError) {
-          console.error(`Download error for ${fileInfo.fullPath}:`, dlError);
-          continue;
-        }
-
-        if (fileContent) {
-          const content = await fileContent.text();
-          const fileType = getFileType(fileInfo.name);
-
-          fileAnalyses.push({
-            path: fileInfo.fullPath,
-            content: content.substring(0, 8000),
-            type: fileType,
-          });
-        }
-      } catch (error) {
-        console.error(`Error processing file ${fileInfo.name}:`, error);
-      }
-    }
-
     // Prepare analysis prompt
     const analysisPrompt = `You are a Senior Software Engineer with 20 years of experience. Analyze this codebase and provide a comprehensive report for project managers.
 
-PROJECT: ${project.name}
+PROJECT: ${projectName}
 FILES TO ANALYZE: ${fileAnalyses.length} files
 
 ${fileAnalyses.map(file => `
@@ -268,24 +300,26 @@ Format your response as clear, professional markdown that project managers can e
                   }
 
                   if (parsed.type === 'message_stop') {
-                    // Store analysis in database when complete
-                    const { error: insertError } = await supabase
-                      .from('project_analyses')
-                      .insert({
-                        project_id: projectId,
-                        analysis_report: fullAnalysis,
-                        file_count: fileAnalyses.length,
-                        created_at: new Date().toISOString()
-                      });
+                    // Only store analysis for existing projects, not direct analysis
+                    if (!isDirectAnalysis && projectId) {
+                      const { error: insertError } = await supabase
+                        .from('project_analyses')
+                        .insert({
+                          project_id: projectId,
+                          analysis_report: fullAnalysis,
+                          file_count: fileAnalyses.length,
+                          created_at: new Date().toISOString()
+                        });
 
-                    if (insertError) {
-                      console.error('Error storing analysis:', insertError);
+                      if (insertError) {
+                        console.error('Error storing analysis:', insertError);
+                      }
                     }
 
                     controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
                       type: 'complete',
                       fileCount: fileAnalyses.length,
-                      projectName: project.name
+                      projectName: projectName
                     })}\n\n`));
                     controller.close();
                     return;
@@ -296,7 +330,7 @@ Format your response as clear, professional markdown that project managers can e
                     controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
                       type: 'complete',
                       fileCount: fileAnalyses.length,
-                      projectName: project.name
+                      projectName: projectName
                     })}\n\n`));
                     controller.close();
                     return;
