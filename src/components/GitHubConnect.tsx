@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Github, Search, Star, GitBranch, Calendar, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,21 +34,32 @@ const GitHubConnect = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('🔍 GitHubConnect mounted, user:', user?.id);
+    
     // Check if user is authenticated
     if (!user) {
+      console.log('❌ No user found, redirecting to auth');
       navigate('/auth');
       return;
     }
 
     // Check for GitHub OAuth callback
     const checkForGitHubCallback = async () => {
+      console.log('🔄 Checking for GitHub callback...');
+      
       const { data: { session } } = await supabase.auth.getSession();
-      console.log('Session data:', session);
+      console.log('📋 Session data:', {
+        hasSession: !!session,
+        hasProviderToken: !!session?.provider_token,
+        provider: session?.provider,
+        userMetadata: session?.user?.user_metadata
+      });
       
       if (session?.provider_token) {
-        console.log('Found provider token, saving GitHub connection');
+        console.log('✅ Found provider token, saving GitHub connection');
         await saveGitHubConnection(session.provider_token, session.user?.user_metadata || {});
       } else {
+        console.log('ℹ️ No provider token, checking existing connection');
         // Just check existing connection
         await checkGitHubConnection();
       }
@@ -59,6 +71,8 @@ const GitHubConnect = () => {
   const checkGitHubConnection = async () => {
     if (!user) return;
 
+    console.log('🔍 Checking GitHub connection for user:', user.id);
+
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -66,22 +80,38 @@ const GitHubConnect = () => {
         .eq('id', user.id)
         .single();
 
+      console.log('👤 Profile check result:', {
+        hasProfile: !!profile,
+        hasToken: !!profile?.github_access_token,
+        username: profile?.github_username,
+        connectedAt: profile?.github_connected_at,
+        error: error?.message
+      });
+
       if (!error && profile?.github_access_token) {
+        console.log('✅ GitHub connection found, setting connected state');
         setIsConnected(true);
         setUserInfo({ username: profile.github_username });
         // Automatically fetch repositories when connected
         await fetchRepositories();
       } else {
+        console.log('❌ No GitHub connection found');
         setIsConnected(false);
       }
     } catch (error) {
-      console.error('Error checking GitHub connection:', error);
+      console.error('💥 Error checking GitHub connection:', error);
       setIsConnected(false);
     }
   };
 
   const saveGitHubConnection = async (accessToken: string, userData: any) => {
     if (!user) return;
+    
+    console.log('💾 Saving GitHub connection...', {
+      userId: user.id,
+      hasToken: !!accessToken,
+      userData: userData
+    });
     
     try {
       const authToken = (await supabase.auth.getSession()).data.session?.access_token;
@@ -90,6 +120,8 @@ const GitHubConnect = () => {
         login: userData?.user_name || userData?.login || userData?.preferred_username || 'github-user',
         id: (userData?.user_id || userData?.id || userData?.sub || '').toString(),
       };
+      
+      console.log('🔄 Calling saveGitHubConnection function with:', normalized);
       
       const response = await supabase.functions.invoke('github-repos', {
         body: {
@@ -102,10 +134,14 @@ const GitHubConnect = () => {
         }
       });
 
+      console.log('📡 Edge function response:', response);
+
       if (response.error) {
+        console.error('❌ Edge function error:', response.error);
         throw new Error(response.error.message);
       }
 
+      console.log('✅ GitHub connection saved, refreshing status');
       // Refresh connection status after saving
       await checkGitHubConnection();
       
@@ -114,7 +150,7 @@ const GitHubConnect = () => {
         description: "Successfully connected to your GitHub account",
       });
     } catch (error: any) {
-      console.error('Error saving GitHub connection:', error);
+      console.error('💥 Error saving GitHub connection:', error);
       toast({
         title: "Connection failed",
         description: error.message || "Failed to save GitHub connection",
@@ -126,10 +162,14 @@ const GitHubConnect = () => {
   const fetchRepositories = async () => {
     if (!user) return;
     
+    console.log('📂 Fetching repositories for user:', user.id);
+    
     try {
       setIsLoading(true);
       
       const authToken = (await supabase.auth.getSession()).data.session?.access_token;
+      
+      console.log('🔄 Calling fetchRepos function...');
       
       const response = await supabase.functions.invoke('github-repos', {
         body: {
@@ -140,11 +180,15 @@ const GitHubConnect = () => {
         }
       });
 
+      console.log('📡 Fetch repos response:', response);
+
       if (response.error) {
+        console.error('❌ Fetch repos error:', response.error);
         throw new Error(response.error.message);
       }
 
       if (response.data?.repositories) {
+        console.log('✅ Repositories loaded:', response.data.repositories.length);
         setRepositories(response.data.repositories);
         toast({
           title: "Repositories loaded",
@@ -152,7 +196,7 @@ const GitHubConnect = () => {
         });
       }
     } catch (error: any) {
-      console.error('Error fetching repositories:', error);
+      console.error('💥 Error fetching repositories:', error);
       toast({
         title: "Failed to load repositories",
         description: error.message || "Could not fetch GitHub repositories",
@@ -174,6 +218,7 @@ const GitHubConnect = () => {
       return;
     }
 
+    console.log('🔗 Starting GitHub OAuth connection...');
     setIsLoading(true);
     
     try {
@@ -191,10 +236,13 @@ const GitHubConnect = () => {
       });
 
       if (error) {
+        console.error('❌ OAuth error:', error);
         throw error;
       }
+
+      console.log('✅ OAuth initiated successfully');
     } catch (error: any) {
-      console.error('GitHub OAuth error:', error);
+      console.error('💥 GitHub OAuth error:', error);
       toast({
         title: "Connection failed",
         description: error.message || "Failed to connect to GitHub",
