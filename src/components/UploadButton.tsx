@@ -160,22 +160,22 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
       .split('\n')
       .map((line, index) => {
         if (line.startsWith('# ')) {
-          return <h1 key={index} className="text-2xl font-bold text-foreground mt-6 mb-3">{line.substring(2)}</h1>;
+          return <h1 key={index} className="text-xl font-bold text-foreground mt-4 mb-2 first:mt-0">{line.substring(2)}</h1>;
         }
         if (line.startsWith('## ')) {
-          return <h2 key={index} className="text-xl font-semibold text-foreground mt-5 mb-2">{line.substring(3)}</h2>;
+          return <h2 key={index} className="text-lg font-semibold text-foreground mt-4 mb-2">{line.substring(3)}</h2>;
         }
         if (line.startsWith('### ')) {
-          return <h3 key={index} className="text-lg font-medium text-foreground mt-4 mb-2">{line.substring(4)}</h3>;
+          return <h3 key={index} className="text-base font-medium text-foreground mt-3 mb-1">{line.substring(4)}</h3>;
         }
         if (line.startsWith('**') && line.endsWith('**')) {
-          return <p key={index} className="font-bold text-foreground mb-2">{line.slice(2, -2)}</p>;
+          return <p key={index} className="font-semibold text-foreground mb-1">{line.slice(2, -2)}</p>;
         }
         if (line.startsWith('- ')) {
-          return <li key={index} className="text-muted-foreground ml-4 mb-1">{line.substring(2)}</li>;
+          return <li key={index} className="text-muted-foreground ml-4 mb-1 list-disc">{line.substring(2)}</li>;
         }
         if (line.trim() === '') {
-          return <br key={index} />;
+          return <div key={index} className="h-2" />;
         }
         return <p key={index} className="text-muted-foreground mb-2 leading-relaxed">{line}</p>;
       });
@@ -271,22 +271,27 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
           
           {/* Analysis Report Display */}
           {analysisReport && (
-            <div className="w-full max-w-4xl">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+            <div className="w-full max-w-5xl">
+              <Card className="shadow-elegant border-primary/20">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-lg">
                     <FileText className="w-5 h-5 text-accent" />
                     Analysis Report for {uploadedItem}
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-sm">
                     Comprehensive engineering analysis and insights
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="prose prose-sm max-w-none">
-                    <div className="space-y-4 text-sm">
+                <CardContent className="pt-0">
+                  <div className="max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+                    <div className="space-y-3 text-sm leading-relaxed">
                       {formatAnalysis(analysisReport)}
                     </div>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-border/50">
+                    <p className="text-xs text-muted-foreground">
+                      Scroll to view the complete analysis report
+                    </p>
                   </div>
                 </CardContent>
               </Card>
