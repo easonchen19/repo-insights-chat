@@ -39,7 +39,21 @@ const GitHubConnect = () => {
       return;
     }
 
-    checkGitHubConnection();
+    // Check for GitHub OAuth callback
+    const checkForGitHubCallback = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      console.log('Session data:', session);
+      
+      if (session?.session?.provider_token) {
+        console.log('Found provider token, saving GitHub connection');
+        await saveGitHubConnection(session.session.provider_token, session.session.user.user_metadata);
+      } else {
+        // Just check existing connection
+        await checkGitHubConnection();
+      }
+    };
+
+    checkForGitHubCallback();
   }, [user, navigate]);
 
   const checkGitHubConnection = async () => {
@@ -63,6 +77,44 @@ const GitHubConnect = () => {
     } catch (error) {
       console.error('Error checking GitHub connection:', error);
       setIsConnected(false);
+    }
+  };
+
+  const saveGitHubConnection = async (accessToken: string, userData: any) => {
+    if (!user) return;
+    
+    try {
+      const authToken = (await supabase.auth.getSession()).data.session?.access_token;
+      
+      const response = await supabase.functions.invoke('github-repos', {
+        body: {
+          action: 'saveGitHubConnection',
+          accessToken,
+          githubUserData: userData
+        },
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      // Refresh connection status after saving
+      await checkGitHubConnection();
+      
+      toast({
+        title: "GitHub Connected",
+        description: "Successfully connected to your GitHub account",
+      });
+    } catch (error: any) {
+      console.error('Error saving GitHub connection:', error);
+      toast({
+        title: "Connection failed",
+        description: error.message || "Failed to save GitHub connection",
+        variant: "destructive"
+      });
     }
   };
 
@@ -125,7 +177,11 @@ const GitHubConnect = () => {
         provider: 'github',
         options: {
           scopes: 'repo read:user',
-          redirectTo: `${window.location.origin}/github`
+          redirectTo: `${window.location.origin}/github`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       });
 
