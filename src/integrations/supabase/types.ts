@@ -22,6 +22,7 @@ export type Database = {
           id: string
           project_id: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           analysis_report: string
@@ -30,6 +31,7 @@ export type Database = {
           id?: string
           project_id: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           analysis_report?: string
@@ -38,6 +40,7 @@ export type Database = {
           id?: string
           project_id?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -58,6 +61,7 @@ export type Database = {
           total_size: number
           updated_at: string
           upload_path: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -67,6 +71,7 @@ export type Database = {
           total_size?: number
           updated_at?: string
           upload_path: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -76,6 +81,7 @@ export type Database = {
           total_size?: number
           updated_at?: string
           upload_path?: string
+          user_id?: string | null
         }
         Relationships: []
       }
