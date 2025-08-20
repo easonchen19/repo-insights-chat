@@ -7,6 +7,7 @@ import { AuthProvider } from "./hooks/useAuth";
 import Navigation from "./components/Navigation";
 import Index from "./pages/Index";
 import Upload from "./pages/Upload";
+import Analyzer from "./pages/Analyzer";
 import Projects from "./pages/Projects";
 import GitHub from "./pages/GitHub";
 import Auth from "./pages/Auth";
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/upload" element={<Upload />} />
+            <Route path="/analyzer" element={<Analyzer />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/github" element={<GitHub />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
