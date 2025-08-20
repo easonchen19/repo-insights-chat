@@ -1,9 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Upload, FileText, FolderOpen, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useLocation } from "react-router-dom";
 
 
 interface AnalysisItem {
@@ -43,6 +44,27 @@ export const AnalyzerMain = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const location = useLocation();
+
+  // Check if we have GitHub repository files passed from navigation
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.repoFiles && Array.isArray(state.repoFiles)) {
+      const githubFiles: UploadedFile[] = state.repoFiles.map((file: any) => ({
+        name: file.name,
+        size: file.content?.length || 0,
+        type: file.type || 'text/plain',
+        content: file.content
+      }));
+      
+      setUploadedFiles(githubFiles);
+      
+      toast({
+        title: `Repository "${state.repoName}" loaded`,
+        description: `${githubFiles.length} files ready for analysis from GitHub`,
+      });
+    }
+  }, [location.state, toast]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();

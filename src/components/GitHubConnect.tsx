@@ -1,18 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Github, Search, Star, GitBranch, Calendar, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 interface Repository {
   id: number;
   name: string;
+  full_name: string;
   description: string;
   language: string;
   stars: number;
   updatedAt: string;
   private: boolean;
+  html_url: string;
+  default_branch: string;
 }
 
 const GitHubConnect = () => {
@@ -20,58 +26,172 @@ const GitHubConnect = () => {
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [githubAccessToken, setGithubAccessToken] = useState<string | null>(null);
+  const [userInfo, setUserInfo] = useState<any>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if user is authenticated
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+
+    // Check if we have GitHub access token from OAuth
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessToken = urlParams.get('access_token');
+    
+    if (accessToken) {
+      setGithubAccessToken(accessToken);
+      setIsConnected(true);
+      fetchRepositories(accessToken);
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [user, navigate]);
 
   const handleConnect = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to connect your GitHub account",
+        variant: "destructive"
+      });
+      navigate('/auth');
+      return;
+    }
+
     setIsLoading(true);
     
-    // Simulate GitHub OAuth flow
-    setTimeout(() => {
-      setIsConnected(true);
-      setIsLoading(false);
-      
-      // Mock repositories data
-      setRepositories([
-        {
-          id: 1,
-          name: "awesome-project",
-          description: "A full-stack web application built with React and Node.js",
-          language: "TypeScript",
-          stars: 127,
-          updatedAt: "2024-01-15",
-          private: false
-        },
-        {
-          id: 2,
-          name: "ml-algorithms",
-          description: "Implementation of various machine learning algorithms",
-          language: "Python",
-          stars: 89,
-          updatedAt: "2024-01-10",
-          private: true
-        },
-        {
-          id: 3,
-          name: "mobile-app",
-          description: "Cross-platform mobile application using React Native",
-          language: "JavaScript",
-          stars: 45,
-          updatedAt: "2024-01-08",
-          private: false
+    try {
+      // Sign in with GitHub OAuth through Supabase
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          scopes: 'repo read:user',
+          redirectTo: `${window.location.origin}/github`
         }
-      ]);
-      
-      toast({
-        title: "Connected to GitHub",
-        description: "Successfully connected your GitHub account",
       });
-    }, 2000);
+
+      if (error) {
+        throw error;
+      }
+    } catch (error: any) {
+      console.error('GitHub OAuth error:', error);
+      toast({
+        title: "Connection failed",
+        description: error.message || "Failed to connect to GitHub",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+    }
   };
 
-  const handleAnalyzeRepo = (repo: Repository) => {
+  const fetchRepositories = async (accessToken: string) => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      
+      const authToken = (await supabase.auth.getSession()).data.session?.access_token;
+      
+      const response = await supabase.functions.invoke('github-repos', {
+        body: {
+          action: 'fetchRepos',
+          accessToken: accessToken
+        },
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.repositories) {
+        setRepositories(response.data.repositories);
+        toast({
+          title: "Repositories loaded",
+          description: `Found ${response.data.repositories.length} repositories`,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error fetching repositories:', error);
+      toast({
+        title: "Failed to load repositories",
+        description: error.message || "Could not fetch GitHub repositories",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAnalyzeRepo = async (repo: Repository) => {
+    if (!githubAccessToken || !user) {
+      toast({
+        title: "Not connected",
+        description: "Please connect your GitHub account first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      const authToken = (await supabase.auth.getSession()).data.session?.access_token;
+      
+      // Fetch repository contents
+      const response = await supabase.functions.invoke('github-repos', {
+        body: {
+          action: 'fetchRepoContents',
+          accessToken: githubAccessToken,
+          repo_owner: repo.full_name.split('/')[0],
+          repo_name: repo.full_name.split('/')[1]
+        },
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.files) {
+        // Navigate to analyzer with the fetched files
+        navigate('/analyzer', { 
+          state: { 
+            repoFiles: response.data.files,
+            repoName: repo.name,
+            repoDescription: repo.description
+          } 
+        });
+      }
+    } catch (error: any) {
+      console.error('Error analyzing repository:', error);
+      toast({
+        title: "Analysis failed",
+        description: error.message || "Could not analyze repository",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDisconnect = () => {
+    setIsConnected(false);
+    setGithubAccessToken(null);
+    setRepositories([]);
+    setUserInfo(null);
     toast({
-      title: "Analysis started",
-      description: `Analyzing repository: ${repo.name}`,
+      title: "Disconnected",
+      description: "GitHub account disconnected successfully",
     });
   };
 
@@ -156,7 +276,7 @@ const GitHubConnect = () => {
               <Github className="w-4 h-4 mr-2" />
               Connected as username
             </div>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleDisconnect}>
               Disconnect
             </Button>
           </div>
