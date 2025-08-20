@@ -1,24 +1,14 @@
-
 import { useState } from "react";
 import { Plus, History, FileText, Clock, CheckCircle2, XCircle, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-interface UploadedFile {
-  name: string;
-  size: number;
-  type: string;
-  content?: string;
-}
-
 interface AnalysisItem {
   id: string;
   name: string;
   date: string;
   status: 'completed' | 'analyzing' | 'failed';
-  uploadedFiles?: UploadedFile[];
-  analysisReport?: string;
 }
 
 interface AnalyzerSidebarProps {
@@ -56,9 +46,7 @@ export const AnalyzerSidebar = ({
       id: newId,
       name: `New Analysis ${analysisHistory.length + 1}`,
       date: new Date().toLocaleDateString(),
-      status: 'analyzing' as const,
-      uploadedFiles: [],
-      analysisReport: ""
+      status: 'analyzing' as const
     };
     
     setAnalysisHistory([newAnalysis, ...analysisHistory]);
@@ -141,11 +129,6 @@ export const AnalyzerSidebar = ({
                       <div className="text-xs text-muted-foreground">
                         {analysis.date}
                       </div>
-                      {analysis.uploadedFiles && analysis.uploadedFiles.length > 0 && (
-                        <div className="text-xs text-muted-foreground">
-                          {analysis.uploadedFiles.length} files
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
