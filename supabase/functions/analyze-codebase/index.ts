@@ -215,7 +215,7 @@ Format your response as clear, professional markdown that project managers can e
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_completion_tokens: 4000,
+        max_tokens: 4000,
         stream: true,
         messages: [{
           role: 'user',
@@ -255,32 +255,10 @@ Format your response as clear, professional markdown that project managers can e
             for (const line of lines) {
               if (line.startsWith('data: ')) {
                 const data = line.slice(6);
-                if (data === '[DONE]') {
-                  // Store analysis in database when complete
-                  const { error: insertError } = await supabase
-                    .from('project_analyses')
-                    .insert({
-                      project_id: projectId,
-                      analysis_report: fullAnalysis,
-                      file_count: fileAnalyses.length,
-                      created_at: new Date().toISOString()
-                    });
-
-                  if (insertError) {
-                    console.error('Error storing analysis:', insertError);
-                  }
-
-                  controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
-                    type: 'complete',
-                    fileCount: fileAnalyses.length,
-                    projectName: project.name
-                  })}\n\n`));
-                  controller.close();
-                  return;
-                }
 
                 try {
                   const parsed = JSON.parse(data);
+
                   if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
                     fullAnalysis += parsed.delta.text;
                     controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
@@ -288,8 +266,41 @@ Format your response as clear, professional markdown that project managers can e
                       text: parsed.delta.text
                     })}\n\n`));
                   }
-                } catch (e) {
-                  // Skip invalid JSON
+
+                  if (parsed.type === 'message_stop') {
+                    // Store analysis in database when complete
+                    const { error: insertError } = await supabase
+                      .from('project_analyses')
+                      .insert({
+                        project_id: projectId,
+                        analysis_report: fullAnalysis,
+                        file_count: fileAnalyses.length,
+                        created_at: new Date().toISOString()
+                      });
+
+                    if (insertError) {
+                      console.error('Error storing analysis:', insertError);
+                    }
+
+                    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
+                      type: 'complete',
+                      fileCount: fileAnalyses.length,
+                      projectName: project.name
+                    })}\n\n`));
+                    controller.close();
+                    return;
+                  }
+                } catch (_e) {
+                  // Fallback for non-JSON terminator (e.g., [DONE])
+                  if (data === '[DONE]') {
+                    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
+                      type: 'complete',
+                      fileCount: fileAnalyses.length,
+                      projectName: project.name
+                    })}\n\n`));
+                    controller.close();
+                    return;
+                  }
                 }
               }
             }
@@ -304,7 +315,7 @@ Format your response as clear, professional markdown that project managers can e
     return new Response(stream, {
       headers: {
         ...corsHeaders,
-        'Content-Type': 'text/plain',
+        'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
       },
