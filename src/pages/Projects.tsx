@@ -1,7 +1,12 @@
 import ProjectsDashboard from "@/components/ProjectsDashboard";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const Projects = () => {
-  return <ProjectsDashboard />;
+  return (
+    <ProtectedRoute>
+      <ProjectsDashboard />
+    </ProtectedRoute>
+  );
 };
 
 export default Projects;

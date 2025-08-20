@@ -1,11 +1,25 @@
 import { useState } from "react";
-import { Code, Github, Menu, X, FolderOpen, Brain } from "lucide-react";
+import { Code, Github, Menu, X, FolderOpen, Brain, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import UploadButton from "./UploadButton";
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
@@ -49,7 +63,29 @@ const Navigation = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <UploadButton variant="outline" size="sm" />
+            {user ? (
+              <>
+                <UploadButton variant="outline" size="sm" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <User className="w-4 h-4 mr-2" />
+                      Account
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              <Button variant="outline" size="sm" asChild>
+                <NavLink to="/auth">Sign In</NavLink>
+              </Button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -85,7 +121,24 @@ const Navigation = () => {
                 <Github className="w-4 h-4" />
                 GitHub
               </NavLink>
-              <UploadButton variant="outline" size="sm" />
+              {user ? (
+                <>
+                  <UploadButton variant="outline" size="sm" />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSignOut}
+                    className="flex items-center gap-2 justify-start"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" size="sm" asChild>
+                  <NavLink to="/auth">Sign In</NavLink>
+                </Button>
+              )}
             </div>
           </div>
         )}

@@ -1,9 +1,13 @@
 import { Github, Sparkles, Code, Brain, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { NavLink } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import UploadButton from "@/components/UploadButton";
 
 const Hero = () => {
+  const { user } = useAuth();
+  
   return (
     <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
       {/* Animated background elements */}
@@ -29,8 +33,13 @@ const Hero = () => {
         </p>
         
         <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
-          <UploadButton variant="hero" size="default" />
-          
+          {user ? (
+            <UploadButton variant="hero" size="default" />
+          ) : (
+            <Button variant="hero" size="lg" asChild>
+              <NavLink to="/auth">Get Started</NavLink>
+            </Button>
+          )}
           
           <Button variant="glow" size="lg" className="group">
             <Github className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
