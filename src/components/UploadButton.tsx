@@ -182,7 +182,7 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
   };
 
   return (
-    <div className="relative">
+    <div className="w-full space-y-4">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button 
@@ -232,12 +232,12 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
       />
       
       {uploadedItem && (
-        <div className="absolute top-full left-0 mt-2 space-y-2">
-          <div className="text-sm text-accent font-medium whitespace-nowrap">
+        <div className="mt-4 space-y-4">
+          <div className="text-sm text-accent font-medium">
             ✓ Uploaded: {uploadedItem}
           </div>
           {uploadedProjectId && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 size="sm"
                 variant="secondary"
@@ -268,30 +268,30 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
               </Button>
             </div>
           )}
-        </div>
-      )}
-      
-      {/* Analysis Report Display */}
-      {analysisReport && (
-        <div className="absolute top-full left-0 mt-20 w-full max-w-4xl">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-accent" />
-                Analysis Report for {uploadedItem}
-              </CardTitle>
-              <CardDescription>
-                Comprehensive engineering analysis and insights
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="prose prose-sm max-w-none">
-                <div className="space-y-4 text-sm">
-                  {formatAnalysis(analysisReport)}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          
+          {/* Analysis Report Display */}
+          {analysisReport && (
+            <div className="w-full max-w-4xl">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-accent" />
+                    Analysis Report for {uploadedItem}
+                  </CardTitle>
+                  <CardDescription>
+                    Comprehensive engineering analysis and insights
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose prose-sm max-w-none">
+                    <div className="space-y-4 text-sm">
+                      {formatAnalysis(analysisReport)}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       )}
       
