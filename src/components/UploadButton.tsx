@@ -1,8 +1,9 @@
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, Loader2, FolderOpen, File, Brain, MessageSquare } from "lucide-react";
+import { Upload, Loader2, FolderOpen, File, Brain, MessageSquare, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import CodebaseChatDialog from "@/components/CodebaseChatDialog";
@@ -18,6 +19,7 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
   const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [analysisReport, setAnalysisReport] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -136,6 +138,7 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
         throw error;
       }
 
+      setAnalysisReport(data.analysis);
       toast({
         title: "Analysis Complete",
         description: `Successfully analyzed ${data.fileCount} files in ${uploadedItem}`,
@@ -150,6 +153,32 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const formatAnalysis = (text: string) => {
+    return text
+      .split('\n')
+      .map((line, index) => {
+        if (line.startsWith('# ')) {
+          return <h1 key={index} className="text-2xl font-bold text-foreground mt-6 mb-3">{line.substring(2)}</h1>;
+        }
+        if (line.startsWith('## ')) {
+          return <h2 key={index} className="text-xl font-semibold text-foreground mt-5 mb-2">{line.substring(3)}</h2>;
+        }
+        if (line.startsWith('### ')) {
+          return <h3 key={index} className="text-lg font-medium text-foreground mt-4 mb-2">{line.substring(4)}</h3>;
+        }
+        if (line.startsWith('**') && line.endsWith('**')) {
+          return <p key={index} className="font-bold text-foreground mb-2">{line.slice(2, -2)}</p>;
+        }
+        if (line.startsWith('- ')) {
+          return <li key={index} className="text-muted-foreground ml-4 mb-1">{line.substring(2)}</li>;
+        }
+        if (line.trim() === '') {
+          return <br key={index} />;
+        }
+        return <p key={index} className="text-muted-foreground mb-2 leading-relaxed">{line}</p>;
+      });
   };
 
   return (
@@ -241,6 +270,31 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
           )}
         </div>
       )}
+      
+      {/* Analysis Report Display */}
+      {analysisReport && (
+        <div className="absolute top-full left-0 mt-20 w-full max-w-4xl">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-accent" />
+                Analysis Report for {uploadedItem}
+              </CardTitle>
+              <CardDescription>
+                Comprehensive engineering analysis and insights
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="prose prose-sm max-w-none">
+                <div className="space-y-4 text-sm">
+                  {formatAnalysis(analysisReport)}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      
       {uploadedProjectId && (
         <CodebaseChatDialog projectId={uploadedProjectId} open={chatOpen} onOpenChange={setChatOpen} />
       )}
