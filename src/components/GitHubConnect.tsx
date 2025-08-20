@@ -51,7 +51,8 @@ const GitHubConnect = () => {
       console.log('📋 Session data:', {
         hasSession: !!session,
         hasProviderToken: !!session?.provider_token,
-        provider: session?.provider,
+        // provider is not a property of Session; if needed, read it from user.app_metadata
+        appProvider: session?.user?.app_metadata?.provider,
         userMetadata: session?.user?.user_metadata
       });
       
