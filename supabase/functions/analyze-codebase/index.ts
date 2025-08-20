@@ -62,19 +62,55 @@ serve(async (req) => {
       });
     }
 
-    // List all files in the project folder
+    // Recursively get all files from the project folder
     const listPath = (project.upload_path || '').replace(/^\/+|\/+$/g, '');
-    const { data: files, error: filesError } = await supabase.storage
-      .from('project-uploads')
-      .list(listPath, {
-        limit: 100,
-        offset: 0,
-      });
+    
+    async function getAllFiles(path: string): Promise<{ name: string; fullPath: string; metadata: any }[]> {
+      const { data: items, error } = await supabase.storage
+        .from('project-uploads')
+        .list(path, {
+          limit: 1000,
+          offset: 0,
+        });
 
-    if (filesError) {
-      console.error('Error listing files:', filesError);
-      return new Response(JSON.stringify({ error: 'Failed to list project files' }), {
-        status: 500,
+      if (error) {
+        console.error(`Error listing files in ${path}:`, error);
+        return [];
+      }
+
+      const allFiles: { name: string; fullPath: string; metadata: any }[] = [];
+      
+      for (const item of items || []) {
+        const fullPath = path ? `${path}/${item.name}` : item.name;
+        const meta: any = (item as any).metadata;
+        const isFile = meta && typeof meta.size === 'number';
+        
+        if (isFile) {
+          // It's a file
+          allFiles.push({
+            name: item.name,
+            fullPath: fullPath,
+            metadata: meta
+          });
+        } else {
+          // It's a folder, recurse into it
+          const subFiles = await getAllFiles(fullPath);
+          allFiles.push(...subFiles);
+        }
+      }
+      
+      return allFiles;
+    }
+
+    const allFiles = await getAllFiles(listPath);
+    console.log(`Found ${allFiles.length} files in project ${project.name}`);
+
+    if (allFiles.length === 0) {
+      return new Response(JSON.stringify({ 
+        error: 'No files found in the uploaded project',
+        projectPath: listPath 
+      }), {
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -82,35 +118,30 @@ serve(async (req) => {
     // Download and analyze files
     const fileAnalyses: FileAnalysis[] = [];
     
-    for (const file of files || []) {
-      // Treat entries with metadata.size as files; folders don't include size
-      const meta: any = (file as any).metadata;
-      const isFile = meta && typeof meta.size === 'number';
-      if (!isFile) continue;
+    for (const fileInfo of allFiles) {
 
       try {
-        const fullPath = `${listPath}/${file.name}`.replace(/\/+/, '/');
         const { data: fileContent, error: dlError } = await supabase.storage
           .from('project-uploads')
-          .download(fullPath);
+          .download(fileInfo.fullPath);
 
         if (dlError) {
-          console.error(`Download error for ${fullPath}:`, dlError);
+          console.error(`Download error for ${fileInfo.fullPath}:`, dlError);
           continue;
         }
 
         if (fileContent) {
           const content = await fileContent.text();
-          const fileType = getFileType(file.name);
+          const fileType = getFileType(fileInfo.name);
 
           fileAnalyses.push({
-            path: fullPath,
+            path: fileInfo.fullPath,
             content: content.substring(0, 8000),
             type: fileType,
           });
         }
       } catch (error) {
-        console.error(`Error processing file ${file.name}:`, error);
+        console.error(`Error processing file ${fileInfo.name}:`, error);
       }
     }
 
