@@ -20,7 +20,7 @@ const UploadButton = ({ variant = "outline", size = "sm", ...props }: UploadButt
   return (
     <Button variant={variant} size={size} onClick={handleClick} {...props}>
       <Upload className="w-4 h-4 mr-2" />
-      Upload Project
+      Upload & Vibe
     </Button>
   );
 };

@@ -3,48 +3,52 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Modern AI Platform Design System - Purple & Black Theme */
+/* VibePrompting - Deep Purple AI Platform Design System */
 
 @layer base {
   :root {
-    --background: 240 10% 8%;
-    --foreground: 300 20% 95%;
+    --background: 255 3% 6%;
+    --foreground: 280 20% 95%;
 
-    --card: 240 10% 12%;
-    --card-foreground: 300 15% 92%;
+    --card: 260 8% 10%;
+    --card-foreground: 280 15% 92%;
 
-    --popover: 240 10% 10%;
-    --popover-foreground: 300 15% 92%;
+    --popover: 260 8% 8%;
+    --popover-foreground: 280 15% 92%;
 
-    --primary: 270 91% 65%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 270 100% 35%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 5% 16%;
-    --secondary-foreground: 300 10% 85%;
+    --secondary: 255 6% 12%;
+    --secondary-foreground: 280 10% 85%;
 
-    --muted: 240 5% 18%;
-    --muted-foreground: 240 5% 65%;
+    --muted: 260 6% 15%;
+    --muted-foreground: 260 5% 65%;
 
-    --accent: 280 100% 70%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 285 100% 60%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 3.7% 20%;
-    --input: 240 3.7% 20%;
-    --ring: 270 91% 65%;
+    --border: 260 4% 18%;
+    --input: 260 4% 18%;
+    --ring: 270 100% 35%;
 
-    /* Custom Design Tokens - Purple & Black Theme */
-    --gradient-primary: linear-gradient(135deg, hsl(270 91% 65%), hsl(280 100% 70%));
-    --gradient-secondary: linear-gradient(180deg, hsl(240 10% 8%), hsl(240 5% 16%));
-    --gradient-hero: linear-gradient(135deg, hsl(270 91% 65% / 0.15), hsl(280 100% 70% / 0.15));
+    /* Custom Design Tokens - Deep Purple Vibe Theme */
+    --gradient-primary: linear-gradient(135deg, hsl(270 100% 35%), hsl(285 100% 60%));
+    --gradient-secondary: linear-gradient(180deg, hsl(255 3% 6%), hsl(260 8% 10%));
+    --gradient-hero: linear-gradient(135deg, hsl(270 100% 35% / 0.2), hsl(285 100% 60% / 0.15));
+    --gradient-vibe: linear-gradient(45deg, hsl(270 100% 35%), hsl(285 100% 60%), hsl(300 100% 70%));
+    --gradient-dark: linear-gradient(135deg, hsl(255 3% 6%), hsl(260 8% 10%), hsl(270 10% 15%));
     
-    --shadow-elegant: 0 10px 30px -10px hsl(270 91% 65% / 0.4);
-    --shadow-glow: 0 0 40px hsl(280 100% 70% / 0.3);
+    --shadow-elegant: 0 15px 40px -15px hsl(270 100% 35% / 0.5);
+    --shadow-glow: 0 0 50px hsl(285 100% 60% / 0.4);
+    --shadow-deep: 0 25px 60px -20px hsl(270 100% 35% / 0.6);
     
-    --animation-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --animation-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --animation-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --animation-bounce: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.8);
+    --animation-pulse: all 2s cubic-bezier(0.4, 0, 0.6, 1);
 
     --radius: 0.5rem;
 
@@ -92,26 +96,77 @@
     min-height: 100vh;
   }
 
-  /* Custom animations */
+  /* VibePrompting Custom Animations */
   .animate-glow {
-    animation: glow 2s ease-in-out infinite alternate;
+    animation: glow 3s ease-in-out infinite alternate;
+  }
+
+  .animate-pulse-vibe {
+    animation: pulse-vibe 4s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 3s linear infinite;
   }
 
   @keyframes glow {
-    from {
+    0% {
       box-shadow: var(--shadow-elegant);
     }
-    to {
+    50% {
       box-shadow: var(--shadow-glow);
+    }
+    100% {
+      box-shadow: var(--shadow-deep);
+    }
+  }
+
+  @keyframes pulse-vibe {
+    0%, 100% {
+      background: var(--gradient-primary);
+      transform: scale(1);
+    }
+    50% {
+      background: var(--gradient-vibe);
+      transform: scale(1.05);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% center;
+    }
+    100% {
+      background-position: 200% center;
     }
   }
 
   .animate-float {
-    animation: float 6s ease-in-out infinite;
+    animation: float 8s ease-in-out infinite;
+  }
+
+  .animate-float-slow {
+    animation: float-slow 12s ease-in-out infinite reverse;
   }
 
   @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-20px); }
+    0%, 100% { 
+      transform: translateY(0px) rotate(0deg); 
+    }
+    50% { 
+      transform: translateY(-30px) rotate(5deg); 
+    }
+  }
+
+  @keyframes float-slow {
+    0%, 100% { 
+      transform: translateY(0px) translateX(0px); 
+    }
+    33% { 
+      transform: translateY(-20px) translateX(10px); 
+    }
+    66% { 
+      transform: translateY(10px) translateX(-10px); 
+    }
   }
 }
