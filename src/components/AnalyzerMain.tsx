@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Upload, FileText, FolderOpen, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,8 @@ interface AnalysisItem {
   name: string;
   date: string;
   status: 'completed' | 'analyzing' | 'failed';
+  uploadedFiles?: UploadedFile[];
+  analysisReport?: string;
 }
 
 interface AnalyzerMainProps {
@@ -40,18 +41,20 @@ export const AnalyzerMain = ({
   setAnalysisHistory
 }: AnalyzerMainProps) => {
   const [isDragOver, setIsDragOver] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const [analysis, setAnalysis] = useState<string>("");
-  const [showTwoPanel, setShowTwoPanel] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const location = useLocation();
 
+  // Get current analysis data
+  const currentAnalysisData = analysisHistory.find(item => item.id === currentAnalysis);
+  const uploadedFiles = currentAnalysisData?.uploadedFiles || [];
+  const analysis = currentAnalysisData?.analysisReport || "";
+
   // Check if we have GitHub repository files passed from navigation
   useEffect(() => {
     const state = location.state as any;
-    if (state?.repoFiles && Array.isArray(state.repoFiles)) {
+    if (state?.repoFiles && Array.isArray(state.repoFiles) && currentAnalysis) {
       const githubFiles: UploadedFile[] = state.repoFiles.map((file: any) => ({
         name: file.name,
         size: file.content?.length || 0,
@@ -59,14 +62,20 @@ export const AnalyzerMain = ({
         content: file.content
       }));
       
-      setUploadedFiles(githubFiles);
+      // Update the current analysis with GitHub files
+      const updatedHistory = analysisHistory.map(item => 
+        item.id === currentAnalysis 
+          ? { ...item, uploadedFiles: githubFiles }
+          : item
+      );
+      setAnalysisHistory(updatedHistory);
       
       toast({
         title: `Repository "${state.repoName}" loaded`,
         description: `${githubFiles.length} files ready for analysis from GitHub`,
       });
     }
-  }, [location.state, toast]);
+  }, [location.state, toast, currentAnalysis, analysisHistory, setAnalysisHistory]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -93,6 +102,8 @@ export const AnalyzerMain = ({
   };
 
   const processFiles = async (files: File[]) => {
+    if (!currentAnalysis) return;
+
     const newFiles: UploadedFile[] = [];
     
     for (const file of files) {
@@ -126,7 +137,13 @@ export const AnalyzerMain = ({
       }
     }
     
-    setUploadedFiles(prev => [...prev, ...newFiles]);
+    // Update the current analysis with new files
+    const updatedHistory = analysisHistory.map(item => 
+      item.id === currentAnalysis 
+        ? { ...item, uploadedFiles: [...(item.uploadedFiles || []), ...newFiles] }
+        : item
+    );
+    setAnalysisHistory(updatedHistory);
     
     toast({
       title: "Files uploaded successfully",
@@ -135,7 +152,7 @@ export const AnalyzerMain = ({
   };
 
   const startAnalysis = async () => {
-    if (!currentAnalysis || uploadedFiles.length === 0) {
+    if (!currentAnalysis || !uploadedFiles.length) {
       toast({
         title: "No files to analyze",
         description: "Please upload some files first.",
@@ -144,12 +161,17 @@ export const AnalyzerMain = ({
       return;
     }
 
-    setShowTwoPanel(true);
     setIsAnalyzing(true);
-    setAnalysis("");
+    
+    // Clear previous analysis report
+    const updatedHistory = analysisHistory.map(item => 
+      item.id === currentAnalysis 
+        ? { ...item, analysisReport: "", status: 'analyzing' as const }
+        : item
+    );
+    setAnalysisHistory(updatedHistory);
 
     try {
-      // Use direct fetch to stream SSE from the edge function
       const SUPABASE_URL = "https://wfywmkdqyuucxftpvmfj.supabase.co";
       const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmeXdta2RxeXV1Y3hmdHB2bWZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NjkwNjEsImV4cCI6MjA3MTE0NTA2MX0.elHXCxBIqmz0IlcuOcKlY0gnIB88wK4rgbbpz9be244";
       const authToken = (await supabase.auth.getSession()).data.session?.access_token;
@@ -191,16 +213,22 @@ export const AnalyzerMain = ({
               const data = JSON.parse(line.slice(6));
               
               if (data.type === 'delta' && data.text) {
-                setAnalysis(prev => prev + data.text);
+                // Update the analysis report incrementally
+                const updatedHistory = analysisHistory.map(item => 
+                  item.id === currentAnalysis 
+                    ? { ...item, analysisReport: (item.analysisReport || '') + data.text }
+                    : item
+                );
+                setAnalysisHistory(updatedHistory);
               } else if (data.type === 'complete') {
                 setIsAnalyzing(false);
                 // Update analysis status to completed
-                const updatedHistory = analysisHistory.map(item => 
+                const finalHistory = analysisHistory.map(item => 
                   item.id === currentAnalysis 
                     ? { ...item, status: 'completed' as const }
                     : item
                 );
-                setAnalysisHistory(updatedHistory);
+                setAnalysisHistory(finalHistory);
                 toast({
                   title: "Analysis completed",
                   description: `Successfully analyzed ${data.fileCount} files.`,
@@ -239,7 +267,14 @@ export const AnalyzerMain = ({
   };
 
   const removeFile = (index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    if (!currentAnalysis) return;
+    
+    const updatedHistory = analysisHistory.map(item => 
+      item.id === currentAnalysis 
+        ? { ...item, uploadedFiles: (item.uploadedFiles || []).filter((_, i) => i !== index) }
+        : item
+    );
+    setAnalysisHistory(updatedHistory);
   };
 
   const formatAnalysis = (text: string) => {
@@ -374,8 +409,8 @@ export const AnalyzerMain = ({
     );
   }
 
-  // Show two-panel layout after analysis starts
-  if (showTwoPanel && uploadedFiles.length > 0) {
+  // Show two-panel layout if files are uploaded and analysis has started/completed
+  if (uploadedFiles.length > 0 && (analysis || isAnalyzing)) {
     return (
       <div className="flex-1 flex flex-col">
         <div className="p-6 border-b border-border">
@@ -439,13 +474,6 @@ export const AnalyzerMain = ({
                           Re-run Analysis
                         </>
                       )}
-                    </Button>
-                    <Button 
-                      onClick={() => setShowTwoPanel(false)}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      Add More Files
                     </Button>
                   </div>
                 </div>
