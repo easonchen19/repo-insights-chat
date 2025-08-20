@@ -41,12 +41,12 @@ const GitHubConnect = () => {
 
     // Check for GitHub OAuth callback
     const checkForGitHubCallback = async () => {
-      const { data: session } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       console.log('Session data:', session);
       
-      if (session?.session?.provider_token) {
+      if (session?.provider_token) {
         console.log('Found provider token, saving GitHub connection');
-        await saveGitHubConnection(session.session.provider_token, session.session.user.user_metadata);
+        await saveGitHubConnection(session.provider_token, session.user?.user_metadata || {});
       } else {
         // Just check existing connection
         await checkGitHubConnection();
@@ -86,11 +86,16 @@ const GitHubConnect = () => {
     try {
       const authToken = (await supabase.auth.getSession()).data.session?.access_token;
       
+      const normalized = {
+        login: userData?.user_name || userData?.login || userData?.preferred_username || 'github-user',
+        id: (userData?.user_id || userData?.id || userData?.sub || '').toString(),
+      };
+      
       const response = await supabase.functions.invoke('github-repos', {
         body: {
           action: 'saveGitHubConnection',
           accessToken,
-          githubUserData: userData
+          githubUserData: normalized,
         },
         headers: {
           Authorization: `Bearer ${authToken}`
