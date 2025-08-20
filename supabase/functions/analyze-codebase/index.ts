@@ -205,7 +205,7 @@ Please provide a detailed analysis report with the following sections:
 
 Format your response as clear, professional markdown that project managers can easily understand.`;
 
-    // Call Claude API
+    // Call Claude API with streaming
     const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -215,7 +215,8 @@ Format your response as clear, professional markdown that project managers can e
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 4000,
+        max_completion_tokens: 4000,
+        stream: true,
         messages: [{
           role: 'user',
           content: analysisPrompt
@@ -232,29 +233,81 @@ Format your response as clear, professional markdown that project managers can e
       });
     }
 
-    const claudeData = await claudeResponse.json();
-    const analysis = claudeData.content[0].text;
+    // Create a readable stream to pass through Claude's streaming response
+    let fullAnalysis = '';
+    
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = claudeResponse.body?.getReader();
+        if (!reader) {
+          controller.close();
+          return;
+        }
 
-    // Store analysis in database
-    const { error: insertError } = await supabase
-      .from('project_analyses')
-      .insert({
-        project_id: projectId,
-        analysis_report: analysis,
-        file_count: fileAnalyses.length,
-        created_at: new Date().toISOString()
-      });
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-    if (insertError) {
-      console.error('Error storing analysis:', insertError);
-    }
+            const chunk = new TextDecoder().decode(value);
+            const lines = chunk.split('\n');
 
-    return new Response(JSON.stringify({ 
-      analysis,
-      fileCount: fileAnalyses.length,
-      projectName: project.name 
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6);
+                if (data === '[DONE]') {
+                  // Store analysis in database when complete
+                  const { error: insertError } = await supabase
+                    .from('project_analyses')
+                    .insert({
+                      project_id: projectId,
+                      analysis_report: fullAnalysis,
+                      file_count: fileAnalyses.length,
+                      created_at: new Date().toISOString()
+                    });
+
+                  if (insertError) {
+                    console.error('Error storing analysis:', insertError);
+                  }
+
+                  controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
+                    type: 'complete',
+                    fileCount: fileAnalyses.length,
+                    projectName: project.name
+                  })}\n\n`));
+                  controller.close();
+                  return;
+                }
+
+                try {
+                  const parsed = JSON.parse(data);
+                  if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                    fullAnalysis += parsed.delta.text;
+                    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
+                      type: 'delta',
+                      text: parsed.delta.text
+                    })}\n\n`));
+                  }
+                } catch (e) {
+                  // Skip invalid JSON
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Streaming error:', error);
+          controller.error(error);
+        }
+      }
+    });
+
+    return new Response(stream, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/plain',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
     });
 
   } catch (error) {

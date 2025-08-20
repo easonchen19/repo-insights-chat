@@ -140,25 +140,65 @@ const UploadButton = ({ variant = "outline", size = "sm" }: UploadButtonProps) =
     if (!uploadedProjectId || isAnalyzing) return;
 
     setIsAnalyzing(true);
+    setAnalysisReport(''); // Clear previous report
+    
     try {
-      const { data, error } = await supabase.functions.invoke('analyze-codebase', {
-        body: { projectId: uploadedProjectId }
+      const SUPABASE_URL = "https://wfywmkdqyuucxftpvmfj.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmeXdta2RxeXV1Y3hmdHB2bWZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NjkwNjEsImV4cCI6MjA3MTE0NTA2MX0.elHXCxBIqmz0IlcuOcKlY0gnIB88wK4rgbbpz9be244";
+      const authToken = (await supabase.auth.getSession()).data.session?.access_token;
+      
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/analyze-codebase`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken || SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ projectId: uploadedProjectId })
       });
 
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        throw new Error('Failed to start analysis');
       }
 
-      setAnalysisReport(data.analysis);
-      toast({
-        title: "Analysis Complete",
-        description: `Successfully analyzed ${data.fileCount} files in ${uploadedItem}`,
-      });
-    } catch (error) {
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response stream');
+      }
+
+      let accumulatedText = '';
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = new TextDecoder().decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.type === 'delta' && data.text) {
+                accumulatedText += data.text;
+                setAnalysisReport(accumulatedText);
+              } else if (data.type === 'complete') {
+                toast({
+                  title: "Analysis Complete",
+                  description: `Successfully analyzed ${data.fileCount} files in ${uploadedItem}`,
+                });
+              }
+            } catch (e) {
+              // Skip invalid JSON
+            }
+          }
+        }
+      }
+    } catch (error: any) {
       console.error('Analysis error:', error);
       toast({
         title: "Analysis Failed",
-        description: "Failed to analyze the codebase. Please try again.",
+        description: error.message || "Failed to analyze the codebase. Please try again.",
         variant: "destructive",
       });
     } finally {
