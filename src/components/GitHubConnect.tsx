@@ -26,6 +26,7 @@ const GitHubConnect = () => {
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showRepositories, setShowRepositories] = useState(false);
   const [githubAccessToken, setGithubAccessToken] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<any>(null);
   const { toast } = useToast();
@@ -55,8 +56,6 @@ const GitHubConnect = () => {
       if (!error && profile?.github_access_token) {
         setIsConnected(true);
         setUserInfo({ username: profile.github_username });
-        // Fetch repositories from our edge function
-        await fetchRepositories();
       } else {
         setIsConnected(false);
       }
@@ -221,6 +220,7 @@ const GitHubConnect = () => {
       setGithubAccessToken(null);
       setRepositories([]);
       setUserInfo(null);
+      setShowRepositories(false);
       
       toast({
         title: "Disconnected",
@@ -292,6 +292,66 @@ const GitHubConnect = () => {
               <p>✓ Secure OAuth authentication</p>
               <p>✓ Read-only access to repositories</p>
               <p>✓ No code is stored on our servers</p>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (!showRepositories) {
+    return (
+      <div className="min-h-screen pt-20 px-6">
+        <div className="max-w-2xl mx-auto text-center">
+          <div className="mb-12">
+            <h1 className="text-4xl font-bold mb-4 bg-gradient-primary bg-clip-text text-transparent">
+              GitHub Connected
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              Ready to explore your repositories
+            </p>
+          </div>
+
+          <Card className="p-12 bg-card/50 backdrop-blur-sm">
+            <div className="w-20 h-20 mx-auto mb-6 bg-gradient-primary rounded-full flex items-center justify-center">
+              <Github className="w-10 h-10 text-white" />
+            </div>
+            
+            <h3 className="text-2xl font-semibold mb-4">
+              Welcome {userInfo?.username || 'GitHub User'}!
+            </h3>
+            
+            <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+              Your GitHub account is now connected. Click below to load and browse your repositories.
+            </p>
+            
+            <div className="flex gap-4 justify-center">
+              <Button 
+                variant="hero" 
+                size="lg" 
+                onClick={() => {
+                  setShowRepositories(true);
+                  fetchRepositories();
+                }}
+                disabled={isLoading}
+                className="min-w-48"
+              >
+                {isLoading ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Loading...
+                  </div>
+                ) : (
+                  <>
+                    <Github className="w-5 h-5 mr-2" />
+                    List Projects
+                  </>
+                )}
+              </Button>
+              
+              <Button variant="outline" size="lg" onClick={handleDisconnect}>
+                Disconnect
+              </Button>
             </div>
           </Card>
         </div>
