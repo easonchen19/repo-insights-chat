@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Code, Github, Menu, X, FolderOpen, Brain, LogOut, User, Link, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -24,9 +24,14 @@ const Navigation = () => {
   const { toast } = useToast();
 
   // Check GitHub connection status when user changes
-  useState(() => {
+  useEffect(() => {
+    let cancelled = false;
+
     const checkGitHubConnection = async () => {
-      if (!user) return;
+      if (!user) {
+        setIsGitHubConnected(false);
+        return;
+      }
 
       try {
         const { data: profile, error } = await supabase
@@ -35,19 +40,22 @@ const Navigation = () => {
           .eq('id', user.id)
           .single();
 
-        if (!error && profile?.github_access_token) {
-          setIsGitHubConnected(true);
-        } else {
-          setIsGitHubConnected(false);
+        if (!cancelled) {
+          setIsGitHubConnected(!error && !!profile?.github_access_token);
         }
       } catch (error) {
         console.error('Error checking GitHub connection:', error);
-        setIsGitHubConnected(false);
+        if (!cancelled) {
+          setIsGitHubConnected(false);
+        }
       }
     };
 
     checkGitHubConnection();
-  });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
