@@ -164,6 +164,14 @@ Please provide a detailed analysis report with the following sections:
    - Team skills requirements
    - Estimated effort for major changes
 
+7. **AI PROMPTING TIPS** (for extending this codebase)
+   - Since this codebase may have been AI-generated, provide specific prompting strategies for adding new features
+   - Include tips on how to describe new components that follow the existing patterns
+   - Suggest how to prompt for modifications that maintain code consistency
+   - Provide examples of effective prompts for common feature additions (forms, API endpoints, UI components)
+   - Include guidelines for maintaining the existing design system and architecture patterns
+   - Recommend how to ask AI to refactor or optimize existing code while preserving functionality
+
 Format your response as clear, professional markdown that project managers can easily understand.`;
 
     // Call Claude API
