@@ -67,7 +67,7 @@ export const AnalyzerSidebar = ({
       <div className="p-4 border-b border-border/50">
         <div className="flex items-center justify-between">
           {!isCollapsed && (
-            <h2 className="text-lg font-semibold">Code Analyzer</h2>
+            <h2 className="text-lg font-semibold">VibePrompting</h2>
           )}
           <Button
             variant="ghost"

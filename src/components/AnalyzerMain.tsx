@@ -15,6 +15,13 @@ interface AnalysisItem {
   status: 'completed' | 'analyzing' | 'failed';
 }
 
+interface SessionData {
+  id: string;
+  files: UploadedFile[];
+  analysis: string;
+  showTwoPanel: boolean;
+}
+
 interface AnalyzerMainProps {
   currentAnalysis: string | null;
   setCurrentAnalysis: (id: string | null) => void;
@@ -22,6 +29,8 @@ interface AnalyzerMainProps {
   setIsAnalyzing: (analyzing: boolean) => void;
   analysisHistory: AnalysisItem[];
   setAnalysisHistory: (history: AnalysisItem[]) => void;
+  sessionData: Record<string, SessionData>;
+  setSessionData: React.Dispatch<React.SetStateAction<Record<string, SessionData>>>;
 }
 
 interface UploadedFile {
@@ -37,22 +46,53 @@ export const AnalyzerMain = ({
   isAnalyzing, 
   setIsAnalyzing,
   analysisHistory,
-  setAnalysisHistory
+  setAnalysisHistory,
+  sessionData,
+  setSessionData
 }: AnalyzerMainProps) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [analysis, setAnalysis] = useState<string>("");
   const [showTwoPanel, setShowTwoPanel] = useState(false);
 
-  // Reset states when currentAnalysis changes to null (new session)
+  // Load session data when currentAnalysis changes
   useEffect(() => {
     if (!currentAnalysis) {
+      // Reset for new session
+      setUploadedFiles([]);
+      setAnalysis("");
+      setShowTwoPanel(false);
+      setIsDragOver(false);
+    } else if (sessionData[currentAnalysis]) {
+      // Load existing session data
+      const session = sessionData[currentAnalysis];
+      setUploadedFiles(session.files);
+      setAnalysis(session.analysis);
+      setShowTwoPanel(session.showTwoPanel);
+      setIsDragOver(false);
+    } else {
+      // Initialize new session
       setUploadedFiles([]);
       setAnalysis("");
       setShowTwoPanel(false);
       setIsDragOver(false);
     }
-  }, [currentAnalysis]);
+  }, [currentAnalysis, sessionData]);
+
+  // Save session data whenever state changes
+  useEffect(() => {
+    if (currentAnalysis) {
+      setSessionData(prev => ({
+        ...prev,
+        [currentAnalysis]: {
+          id: currentAnalysis,
+          files: uploadedFiles,
+          analysis,
+          showTwoPanel
+        }
+      }));
+    }
+  }, [currentAnalysis, uploadedFiles, analysis, showTwoPanel, setSessionData]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -375,7 +415,7 @@ export const AnalyzerMain = ({
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center max-w-md">
           <Sparkles className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-2xl font-bold mb-2">Welcome to Code Analyzer</h2>
+          <h2 className="text-2xl font-bold mb-2">Welcome to VibePrompting</h2>
           <p className="text-muted-foreground">
             Start by creating a new analysis to upload and analyze your code files.
           </p>
