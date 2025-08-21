@@ -55,8 +55,12 @@ export const AnalyzerMain = ({
   const [analysis, setAnalysis] = useState<string>("");
   const [showTwoPanel, setShowTwoPanel] = useState(false);
 
+  const [isInitializing, setIsInitializing] = useState(false);
+
   // Load session data when currentAnalysis changes
   useEffect(() => {
+    setIsInitializing(true);
+    
     if (!currentAnalysis) {
       // Reset for new session
       setUploadedFiles([]);
@@ -77,11 +81,14 @@ export const AnalyzerMain = ({
       setShowTwoPanel(false);
       setIsDragOver(false);
     }
-  }, [currentAnalysis, sessionData]);
+    
+    // Small delay to prevent race condition with save effect
+    setTimeout(() => setIsInitializing(false), 0);
+  }, [currentAnalysis]);
 
-  // Save session data whenever state changes
+  // Save session data whenever state changes (but not during initialization)
   useEffect(() => {
-    if (currentAnalysis) {
+    if (currentAnalysis && !isInitializing) {
       setSessionData(prev => ({
         ...prev,
         [currentAnalysis]: {
@@ -92,7 +99,7 @@ export const AnalyzerMain = ({
         }
       }));
     }
-  }, [currentAnalysis, uploadedFiles, analysis, showTwoPanel, setSessionData]);
+  }, [currentAnalysis, uploadedFiles, analysis, showTwoPanel, isInitializing, setSessionData]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
