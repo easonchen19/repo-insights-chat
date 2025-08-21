@@ -117,10 +117,50 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_with_decrypted_tokens: {
+        Row: {
+          created_at: string | null
+          github_access_token: string | null
+          github_connected_at: string | null
+          github_user_id: string | null
+          github_username: string | null
+          id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          github_access_token?: never
+          github_connected_at?: string | null
+          github_user_id?: string | null
+          github_username?: string | null
+          id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          github_access_token?: never
+          github_connected_at?: string | null
+          github_user_id?: string | null
+          github_username?: string | null
+          id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      decrypt_github_token: {
+        Args: { encrypted_token: string }
+        Returns: string
+      }
+      encrypt_github_token: {
+        Args: { token: string }
+        Returns: string
+      }
+      update_github_token: {
+        Args: { github_user_data?: Json; new_token: string; user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
