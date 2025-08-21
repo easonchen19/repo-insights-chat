@@ -19,7 +19,7 @@ serve(async (req) => {
   }
 
   try {
-    const { projectId, analysisId, files, isDirectAnalysis } = await req.json();
+    const { projectId, analysisId, files, isDirectAnalysis, model = 'claude-3-5-haiku-20241022' } = await req.json();
     
     // Support both existing project analysis and direct file analysis
     const targetId = analysisId || projectId;
@@ -300,7 +300,7 @@ Remember: Write everything in simple, encouraging language. Avoid technical jarg
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: model,
         max_tokens: 4000,
         stream: true,
         messages: [{

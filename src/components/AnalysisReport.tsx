@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Brain, Clock, FileText, Users, TrendingUp, AlertTriangle, CheckCircle, XCircle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useModelSelection } from "./ModelSelector";
 
 interface AnalysisReportProps {
   projectId: string;
@@ -15,6 +16,7 @@ interface AnalysisReportProps {
 const AnalysisReport = ({ projectId, projectName, onAnalysisComplete }: AnalysisReportProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<string | null>(null);
+  const { selectedModel } = useModelSelection();
   const { toast } = useToast();
 
   const runAnalysis = async () => {
@@ -32,7 +34,7 @@ const AnalysisReport = ({ projectId, projectName, onAnalysisComplete }: Analysis
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken || SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({ projectId })
+        body: JSON.stringify({ projectId, model: selectedModel })
       });
 
       if (!response.ok) {

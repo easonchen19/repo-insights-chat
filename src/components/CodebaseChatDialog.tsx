@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { useModelSelection } from "./ModelSelector";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CodebaseChatDialogProps {
@@ -19,6 +20,7 @@ interface ChatMessage {
 
 const CodebaseChatDialog = ({ projectId, open, onOpenChange }: CodebaseChatDialogProps) => {
   const { toast } = useToast();
+  const { selectedModel } = useModelSelection();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -31,7 +33,7 @@ const CodebaseChatDialog = ({ projectId, open, onOpenChange }: CodebaseChatDialo
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke('code-chat', {
-        body: { projectId, question }
+        body: { projectId, question, model: selectedModel }
       });
       if (error) throw error;
       const answer = data?.answer || "(No answer)";

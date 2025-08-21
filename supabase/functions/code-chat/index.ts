@@ -18,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    const { projectId, question, maxFiles = 8, maxChars = 16000 } = await req.json();
+    const { projectId, question, maxFiles = 8, maxChars = 16000, model = 'claude-3-5-haiku-20241022' } = await req.json();
 
     if (!projectId || !question) {
       return new Response(JSON.stringify({ error: 'projectId and question are required' }), {
@@ -117,7 +117,7 @@ serve(async (req) => {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: model,
         max_tokens: 1200,
         system,
         messages: [

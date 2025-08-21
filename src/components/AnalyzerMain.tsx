@@ -4,9 +4,11 @@ import { Upload, FileText, FolderOpen, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import FileUpload from "./FileUpload";
+import { ModelSelector, useModelSelection } from "./ModelSelector";
 import { useLocation } from "react-router-dom";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AnalysisItem {
   id: string;
@@ -56,6 +58,8 @@ export const AnalyzerMain = ({
   const [showTwoPanel, setShowTwoPanel] = useState(false);
 
   const [isInitializing, setIsInitializing] = useState(false);
+
+  const { selectedModel, setSelectedModel } = useModelSelection();
 
   // Load session data when currentAnalysis changes
   useEffect(() => {
@@ -224,7 +228,8 @@ export const AnalyzerMain = ({
             content: file.content || '',
             type: file.type
           })),
-          isDirectAnalysis: true
+          isDirectAnalysis: true,
+          model: selectedModel
         })
       });
 
@@ -621,10 +626,17 @@ export const AnalyzerMain = ({
 
           {/* Uploaded Files Preview */}
           {uploadedFiles.length > 0 && (
-            <Card className="mb-6 p-6">
-              <h3 className="text-lg font-semibold mb-4">
+          <Card className="mb-6 p-6">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-semibold">
                 Uploaded Files ({uploadedFiles.length})
               </h3>
+              <ModelSelector 
+                selectedModel={selectedModel}
+                onModelChange={setSelectedModel}
+                className="w-48"
+              />
+            </div>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {uploadedFiles.map((file, index) => (
                   <div
