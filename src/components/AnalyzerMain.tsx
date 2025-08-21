@@ -104,6 +104,7 @@ export const AnalyzerMain = ({
       }));
     }
   }, [currentAnalysis, uploadedFiles, analysis, showTwoPanel, isInitializing, setSessionData]);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
