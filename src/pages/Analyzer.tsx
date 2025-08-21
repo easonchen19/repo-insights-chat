@@ -14,6 +14,11 @@ const Analyzer = () => {
     status: 'completed' | 'analyzing' | 'failed';
   }>>([]);
 
+  const resetAnalysisSession = () => {
+    setCurrentAnalysis(null);
+    setIsAnalyzing(false);
+  };
+
   return (
     <ProtectedRoute>
       <SidebarProvider>
@@ -23,6 +28,7 @@ const Analyzer = () => {
             setAnalysisHistory={setAnalysisHistory}
             currentAnalysis={currentAnalysis}
             setCurrentAnalysis={setCurrentAnalysis}
+            onNewAnalysisSession={resetAnalysisSession}
           />
           <AnalyzerMain 
             currentAnalysis={currentAnalysis}

@@ -16,13 +16,15 @@ interface AnalyzerSidebarProps {
   setAnalysisHistory: (history: AnalysisItem[]) => void;
   currentAnalysis: string | null;
   setCurrentAnalysis: (id: string | null) => void;
+  onNewAnalysisSession: () => void;
 }
 
 export const AnalyzerSidebar = ({ 
   analysisHistory, 
   setAnalysisHistory, 
   currentAnalysis, 
-  setCurrentAnalysis 
+  setCurrentAnalysis,
+  onNewAnalysisSession 
 }: AnalyzerSidebarProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -40,6 +42,9 @@ export const AnalyzerSidebar = ({
   };
 
   const startNewAnalysis = () => {
+    // First reset the current session to clear all state
+    onNewAnalysisSession();
+    
     // Generate a proper UUID-like string for the analysis session
     const newId = crypto.randomUUID();
     const newAnalysis = {

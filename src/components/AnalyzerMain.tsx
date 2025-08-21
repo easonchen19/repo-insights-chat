@@ -43,6 +43,16 @@ export const AnalyzerMain = ({
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [analysis, setAnalysis] = useState<string>("");
   const [showTwoPanel, setShowTwoPanel] = useState(false);
+
+  // Reset states when currentAnalysis changes to null (new session)
+  useEffect(() => {
+    if (!currentAnalysis) {
+      setUploadedFiles([]);
+      setAnalysis("");
+      setShowTwoPanel(false);
+      setIsDragOver(false);
+    }
+  }, [currentAnalysis]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
