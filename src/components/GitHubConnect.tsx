@@ -365,70 +365,51 @@ const GitHubConnect = () => {
           </div>
         </div>
 
-        {!isConnected ? (
-          <Card className="p-12 bg-card/50 backdrop-blur-sm text-center">
-            <div className="w-20 h-20 mx-auto mb-6 bg-gradient-primary rounded-full flex items-center justify-center">
-              <Github className="w-10 h-10 text-white" />
-            </div>
-            
-            <h3 className="text-2xl font-semibold mb-4">
-              Connect GitHub Account
-            </h3>
-            
-            <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-              Connect your GitHub account to access and analyze your repositories
-            </p>
-            
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center text-sm text-muted-foreground">
+            <Github className="w-4 h-4 mr-2" />
+            {isConnected ? `Connected as ${userInfo?.username || 'GitHub User'}` : 'GitHub Integration'}
+          </div>
+          <div className="flex gap-2">
             <Button 
               variant="hero" 
-              size="lg" 
-              onClick={handleConnect}
+              onClick={isConnected ? fetchRepositories : handleConnect}
               disabled={isLoading}
-              className="min-w-48"
             >
               {isLoading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Connecting...
+                  {isConnected ? 'Loading...' : 'Connecting...'}
                 </div>
               ) : (
                 <>
-                  <Github className="w-5 h-5 mr-2" />
-                  Connect with GitHub
+                  <Github className="w-4 h-4 mr-2" />
+                  Show Repo
                 </>
               )}
             </Button>
-          </Card>
-        ) : (
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center text-sm text-muted-foreground">
-                <Github className="w-4 h-4 mr-2" />
-                Connected as {userInfo?.username || 'GitHub User'}
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant="hero" 
-                  onClick={fetchRepositories}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Loading...
-                    </div>
-                  ) : (
-                    <>
-                      <Github className="w-4 h-4 mr-2" />
-                      Show GitHub Repos
-                    </>
-                  )}
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleDisconnect}>
-                  Disconnect
-                </Button>
-              </div>
+            {isConnected && (
+              <Button variant="outline" size="sm" onClick={handleDisconnect}>
+                Disconnect
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {!isConnected && !isLoading && repositories.length === 0 && (
+          <Card className="p-8 bg-card/50 backdrop-blur-sm text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-gradient-primary/20 rounded-full flex items-center justify-center">
+              <Github className="w-8 h-8 text-primary" />
             </div>
+            <h3 className="text-xl font-semibold mb-2">Connect GitHub Account</h3>
+            <p className="text-muted-foreground">
+              Click "Show Repo" to connect your GitHub account and view your repositories
+            </p>
+          </Card>
+        )}
+
+        {isConnected && (
+          <div>
 
             {repositories.length > 0 && (
               <>
