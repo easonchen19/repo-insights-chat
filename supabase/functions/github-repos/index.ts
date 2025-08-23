@@ -35,7 +35,7 @@ serve(async (req) => {
       throw new Error('No authorization header');
     }
 
-    // Initialize Supabase clients
+    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -49,12 +49,6 @@ serve(async (req) => {
       throw new Error('Invalid token');
     }
 
-    // Create a user-scoped client so auth.uid() resolves inside RPC/SQL
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
     console.log('✅ User authenticated:', user.id);
 
     const { action, accessToken, repo_owner, repo_name, githubUserData } = await req.json();
@@ -66,7 +60,7 @@ serve(async (req) => {
       console.log('👤 GitHub user data:', githubUserData);
 
       // Save GitHub connection data to user profile using secure function
-      const { error: updateError } = await userSupabase
+      const { error: updateError } = await supabase
         .rpc('update_github_token', {
           user_id: user.id,
           new_token: accessToken,
@@ -89,7 +83,7 @@ serve(async (req) => {
       console.log('📂 Fetching repositories for user:', user.id);
       
       // Get GitHub access token from user profile using secure function
-      const { data: profile, error: profileError } = await userSupabase
+      const { data: profile, error: profileError } = await supabase
         .rpc('get_user_github_token');
 
       console.log('👤 Profile query result:', { 
@@ -171,7 +165,7 @@ serve(async (req) => {
       console.log('🔌 Disconnecting GitHub for user:', user.id);
       
       // Remove GitHub connection data from user profile
-      const { error: updateError } = await userSupabase
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({
           github_access_token: null,
@@ -197,7 +191,7 @@ serve(async (req) => {
       console.log('📁 Fetching repository contents for:', repo_owner, repo_name);
       
       // Get GitHub access token from user profile using secure function
-      const { data: profile, error: profileError } = await userSupabase
+      const { data: profile, error: profileError } = await supabase
         .rpc('get_user_github_token');
 
       if (profileError || !profile?.[0]?.github_access_token) {
