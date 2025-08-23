@@ -213,6 +213,37 @@ const GitHubConnect = () => {
     }
   };
 
+  const ensureTokenAndFetch = async () => {
+    if (!user) return;
+    try {
+      setIsLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔎 ensureTokenAndFetch check:', {
+        isConnected,
+        hasProviderToken: !!session?.provider_token,
+        provider: session?.user?.app_metadata?.provider
+      });
+
+      if (!isConnected && session?.provider_token && session?.user?.app_metadata?.provider === 'github') {
+        console.log('🔐 Provider token found in session; saving connection...');
+        await saveGitHubConnection(session.provider_token, session.user.user_metadata || {});
+        await fetchRepositories();
+        return;
+      }
+
+      if (isConnected) {
+        await fetchRepositories();
+        return;
+      }
+
+      await handleConnect();
+    } catch (e) {
+      console.error('💥 ensureTokenAndFetch error:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleConnect = async () => {
     if (!user) {
       toast({
@@ -378,7 +409,7 @@ const GitHubConnect = () => {
           <div className="flex gap-2">
             <Button 
               variant="hero" 
-              onClick={isConnected ? fetchRepositories : handleConnect}
+              onClick={ensureTokenAndFetch}
               disabled={isLoading}
             >
               {isLoading ? (
