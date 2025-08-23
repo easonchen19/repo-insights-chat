@@ -117,36 +117,7 @@ export type Database = {
       }
     }
     Views: {
-      profiles_with_decrypted_tokens: {
-        Row: {
-          created_at: string | null
-          github_access_token: string | null
-          github_connected_at: string | null
-          github_user_id: string | null
-          github_username: string | null
-          id: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          github_access_token?: never
-          github_connected_at?: string | null
-          github_user_id?: string | null
-          github_username?: string | null
-          id?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          github_access_token?: never
-          github_connected_at?: string | null
-          github_user_id?: string | null
-          github_username?: string | null
-          id?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       decrypt_github_token: {
@@ -156,6 +127,18 @@ export type Database = {
       encrypt_github_token: {
         Args: { token: string }
         Returns: string
+      }
+      get_user_github_token: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          github_access_token: string
+          github_connected_at: string
+          github_user_id: string
+          github_username: string
+          id: string
+          updated_at: string
+        }[]
       }
       update_github_token: {
         Args: { github_user_data?: Json; new_token: string; user_id: string }

@@ -59,15 +59,12 @@ serve(async (req) => {
       console.log('🔑 Access token provided:', !!accessToken);
       console.log('👤 GitHub user data:', githubUserData);
 
-      // Save GitHub connection data to user profile
+      // Save GitHub connection data to user profile using secure function
       const { error: updateError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          github_access_token: accessToken,
-          github_username: githubUserData.login,
-          github_user_id: githubUserData.id.toString(),
-          github_connected_at: new Date().toISOString()
+        .rpc('update_github_token', {
+          user_id: user.id,
+          new_token: accessToken,
+          github_user_data: githubUserData
         });
 
       if (updateError) {
@@ -85,27 +82,24 @@ serve(async (req) => {
     if (action === 'fetchRepos') {
       console.log('📂 Fetching repositories for user:', user.id);
       
-      // Get GitHub access token from user profile
+      // Get GitHub access token from user profile using secure function
       const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('github_access_token, github_username')
-        .eq('id', user.id)
-        .single();
+        .rpc('get_user_github_token');
 
       console.log('👤 Profile query result:', { 
-        hasProfile: !!profile, 
-        hasToken: !!profile?.github_access_token,
-        username: profile?.github_username,
+        hasProfile: !!profile?.[0], 
+        hasToken: !!profile?.[0]?.github_access_token,
+        username: profile?.[0]?.github_username,
         error: profileError?.message 
       });
 
-      if (profileError || !profile?.github_access_token) {
+      if (profileError || !profile?.[0]?.github_access_token) {
         console.error('❌ No GitHub connection found:', profileError?.message);
         throw new Error('GitHub account not connected. Please connect your GitHub account first.');
       }
 
       // Use stored access token instead of passed one for security
-      const storedAccessToken = profile.github_access_token;
+      const storedAccessToken = profile[0].github_access_token;
       console.log('🔑 Using stored access token (length):', storedAccessToken.length);
       
       // Fetch user's repositories using stored token
@@ -177,19 +171,16 @@ serve(async (req) => {
     if (action === 'fetchRepoContents') {
       console.log('📁 Fetching repository contents for:', repo_owner, repo_name);
       
-      // Get GitHub access token from user profile
+      // Get GitHub access token from user profile using secure function
       const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('github_access_token')
-        .eq('id', user.id)
-        .single();
+        .rpc('get_user_github_token');
 
-      if (profileError || !profile?.github_access_token) {
+      if (profileError || !profile?.[0]?.github_access_token) {
         console.error('❌ No GitHub connection for repo contents:', profileError?.message);
         throw new Error('GitHub account not connected. Please connect your GitHub account first.');
       }
 
-      const storedAccessToken = profile.github_access_token;
+      const storedAccessToken = profile[0].github_access_token;
 
       // Fetch repository file structure for analysis
       const response = await fetch(
