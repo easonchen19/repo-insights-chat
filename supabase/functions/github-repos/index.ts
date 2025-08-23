@@ -100,19 +100,9 @@ serve(async (req) => {
 
       // Use stored access token instead of passed one for security
       const storedAccessToken = profile[0].github_access_token;
-      console.log('🔑 Stored access token info:', {
-        hasToken: !!storedAccessToken,
-        tokenLength: storedAccessToken?.length,
-        tokenType: typeof storedAccessToken
-      });
-
-      if (!storedAccessToken) {
-        console.error('❌ No decrypted token available');
-        throw new Error('GitHub token could not be decrypted. Please reconnect your GitHub account.');
-      }
+      console.log('🔑 Using stored access token (length):', storedAccessToken.length);
       
       // Fetch user's repositories using stored token
-      console.log('🚀 Making GitHub API request...');
       const response = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated', {
         headers: {
           'Authorization': `Bearer ${storedAccessToken}`,
@@ -121,20 +111,11 @@ serve(async (req) => {
         }
       });
 
-      console.log('🐙 GitHub API response:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
+      console.log('🐙 GitHub API response status:', response.status);
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ GitHub API error details:', {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText
-        });
-        throw new Error(`GitHub API error: ${response.status} - ${errorText}`);
+        console.error('❌ GitHub API error:', response.status, await response.text());
+        throw new Error(`GitHub API error: ${response.status}`);
       }
 
       const repos: GitHubRepo[] = await response.json();
