@@ -56,11 +56,11 @@ const GitHubConnect = () => {
         userMetadata: session?.user?.user_metadata
       });
       
-      if (session?.provider_token) {
-        console.log('✅ Found provider token, saving GitHub connection');
+      if (session?.provider_token && session?.user?.app_metadata?.provider === 'github') {
+        console.log('✅ Found GitHub provider token, saving connection');
         await saveGitHubConnection(session.provider_token, session.user?.user_metadata || {});
       } else {
-        console.log('ℹ️ No provider token, checking existing connection');
+        console.log('ℹ️ No provider token found, checking existing connection');
         // Just check existing connection
         await checkGitHubConnection();
       }
@@ -139,7 +139,12 @@ const GitHubConnect = () => {
 
       if (response.error) {
         console.error('❌ Edge function error:', response.error);
-        throw new Error(response.error.message);
+        throw new Error(response.error.message || 'Edge function failed');
+      }
+
+      if (response.data?.error) {
+        console.error('❌ Edge function returned error:', response.data.error);
+        throw new Error(response.data.error);
       }
 
       console.log('✅ GitHub connection saved, refreshing status');
