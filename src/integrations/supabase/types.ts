@@ -117,9 +117,42 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_secure: {
+        Row: {
+          created_at: string | null
+          github_connected_at: string | null
+          github_user_id: string | null
+          github_username: string | null
+          has_github_token: boolean | null
+          id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          github_connected_at?: string | null
+          github_user_id?: string | null
+          github_username?: string | null
+          has_github_token?: never
+          id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          github_connected_at?: string | null
+          github_user_id?: string | null
+          github_username?: string | null
+          has_github_token?: never
+          id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      clear_github_connection: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       decrypt_github_token: {
         Args: { encrypted_token: string }
         Returns: string
