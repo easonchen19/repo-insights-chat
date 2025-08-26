@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Code, Github, Menu, X, FolderOpen, Brain, LogOut, User, Link, Unlink } from "lucide-react";
+import { Code, Github, Menu, X, FolderOpen, Brain, LogOut, User, Link, Unlink, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isGitHubConnected, setIsGitHubConnected] = useState(false);
+  const [githubUsername, setGithubUsername] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -36,12 +37,13 @@ const Navigation = () => {
       try {
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('github_access_token')
+          .select('github_access_token, github_username')
           .eq('id', user.id)
           .single();
 
         if (!cancelled) {
           setIsGitHubConnected(!error && !!profile?.github_access_token);
+          setGithubUsername(profile?.github_username || null);
         }
       } catch (error) {
         console.error('Error checking GitHub connection:', error);
@@ -125,6 +127,7 @@ const Navigation = () => {
 
       // Update local state
       setIsGitHubConnected(false);
+      setGithubUsername(null);
       
       toast({
         title: "Disconnected",
@@ -196,10 +199,26 @@ const Navigation = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     {isGitHubConnected ? (
-                      <DropdownMenuItem onClick={handleGitHubDisconnect} disabled={isLoading}>
-                        <Unlink className="w-4 h-4 mr-2" />
-                        {isLoading ? 'Disconnecting...' : 'GitHub Disconnect'}
-                      </DropdownMenuItem>
+                      <>
+                        {githubUsername && (
+                          <DropdownMenuItem asChild>
+                            <a 
+                              href={`https://github.com/${githubUsername}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center"
+                            >
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              GitHub Homepage
+                            </a>
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleGitHubDisconnect} disabled={isLoading}>
+                          <Unlink className="w-4 h-4 mr-2" />
+                          {isLoading ? 'Disconnecting...' : 'GitHub Disconnect'}
+                        </DropdownMenuItem>
+                      </>
                     ) : (
                       <DropdownMenuItem onClick={handleGitHubConnect} disabled={isLoading}>
                         <Link className="w-4 h-4 mr-2" />
