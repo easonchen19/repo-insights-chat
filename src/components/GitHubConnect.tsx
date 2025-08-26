@@ -152,8 +152,8 @@ const GitHubConnect = () => {
       await checkGitHubConnection();
       
       toast({
-        title: "GitHub Connected",
-        description: "Successfully connected to your GitHub account",
+        title: "GitHub Connected Successfully!",
+        description: `Connected to ${normalized.login}'s GitHub account. Loading repositories...`,
       });
     } catch (error: any) {
       console.error('💥 Error saving GitHub connection:', error);
@@ -196,16 +196,36 @@ const GitHubConnect = () => {
       if (response.data?.repositories) {
         console.log('✅ Repositories loaded:', response.data.repositories.length);
         setRepositories(response.data.repositories);
+        
+        // Show success message with GitHub username and repo count
+        const username = userInfo?.username || response.data.username || 'your GitHub account';
         toast({
-          title: "Repositories loaded",
-          description: `Found ${response.data.repositories.length} repositories`,
+          title: `Connected to ${username}!`,
+          description: `Successfully loaded ${response.data.repositories.length} repositories from your GitHub account.`,
         });
       }
     } catch (error: any) {
       console.error('💥 Error fetching repositories:', error);
+      
+      // Provide specific error messages based on the error type
+      let errorMessage = error.message || "Could not fetch GitHub repositories";
+      let errorTitle = "Failed to load repositories";
+      
+      if (error.message?.includes('GitHub account not connected')) {
+        errorTitle = "GitHub Connection Lost";
+        errorMessage = "Your GitHub connection has expired. Please reconnect your account.";
+        setIsConnected(false);
+        setUserInfo(null);
+      } else if (error.message?.includes('GitHub API error: 401')) {
+        errorTitle = "GitHub Token Expired";
+        errorMessage = "Your GitHub access token has expired. Please reconnect your account.";
+        setIsConnected(false);
+        setUserInfo(null);
+      }
+      
       toast({
-        title: "Failed to load repositories",
-        description: error.message || "Could not fetch GitHub repositories",
+        title: errorTitle,
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

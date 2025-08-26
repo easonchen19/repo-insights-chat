@@ -145,9 +145,39 @@ serve(async (req) => {
         default_branch: repo.default_branch
       }));
 
-      console.log('✅ Returning transformed repositories');
+      // Also fetch current user info to verify token and get latest username
+      const userResponse = await fetch('https://api.github.com/user', {
+        headers: {
+          'Authorization': `Bearer ${storedAccessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'SupabaseEdgeFunction'
+        }
+      });
 
-      return new Response(JSON.stringify({ repositories: transformedRepos }), {
+      let githubUsername = profile[0].github_username;
+      if (userResponse.ok) {
+        const githubUser = await userResponse.json();
+        githubUsername = githubUser.login;
+        console.log('🔍 GitHub user verified:', githubUsername);
+        
+        // Update username if it has changed
+        if (githubUsername !== profile[0].github_username) {
+          console.log('🔄 Updating GitHub username:', githubUsername);
+          await userSupabase
+            .from('profiles')
+            .update({ github_username: githubUsername })
+            .eq('id', user.id);
+        }
+      } else {
+        console.warn('⚠️ Could not verify GitHub user, using stored username');
+      }
+
+      console.log('✅ Returning transformed repositories and username');
+
+      return new Response(JSON.stringify({ 
+        repositories: transformedRepos,
+        username: githubUsername
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
