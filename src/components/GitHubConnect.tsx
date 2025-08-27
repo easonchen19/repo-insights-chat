@@ -427,6 +427,19 @@ const GitHubConnect = () => {
             {isConnected ? `Connected as ${userInfo?.username || 'GitHub User'}` : 'GitHub Integration'}
           </div>
           <div className="flex gap-2">
+            {isConnected && userInfo?.username && (
+              <Button variant="outline" size="sm" asChild>
+                <a 
+                  href={`https://github.com/${userInfo.username}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View GitHub Profile
+                </a>
+              </Button>
+            )}
             <Button 
               variant="hero" 
               onClick={ensureTokenAndFetch}
