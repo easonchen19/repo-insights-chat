@@ -92,27 +92,38 @@ Use concise sections and bullet points where helpful.`;
 
     console.log('📦 analyze-github-code: files received:', files.length, 'valid:', sanitized.length, 'limited:', limited.length, 'budgetLeft:', remaining);
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': claudeApiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 3000,
-        temperature: 0.5,
-        messages: [
-          { role: 'user', content: userContent }
-        ],
-      }),
-    });
+    // Try multiple models for reliability
+    const models = ['claude-sonnet-4-20250514', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'];
+    let response: Response | null = null;
+    let lastErrorText = '';
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Claude API error:', response.status, errorText);
-      return new Response(JSON.stringify({ error: `Claude API error: ${response.status}`, details: errorText }), {
+    for (const model of models) {
+      console.log('🤖 Calling Claude model:', model);
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': claudeApiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 3000,
+          temperature: 0.5,
+          messages: [
+            { role: 'user', content: userContent }
+          ],
+        }),
+      });
+
+      if (response.ok) break;
+      lastErrorText = await response.text();
+      console.error(`❌ Claude API error for ${model}:`, response.status, lastErrorText);
+      response = null;
+    }
+
+    if (!response) {
+      return new Response(JSON.stringify({ error: 'All Claude models failed', details: lastErrorText }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
