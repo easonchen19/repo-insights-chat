@@ -46,6 +46,8 @@ const GitHubConnect = () => {
   const [analyzedFiles, setAnalyzedFiles] = useState<any[]>([]);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [currentRepo, setCurrentRepo] = useState<Repository | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<string>("");
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -447,33 +449,62 @@ const GitHubConnect = () => {
     }
   };
 
-  const handleStartAnalysis = () => {
+  const handleStartAnalysis = async () => {
     if (selectedFiles.size === 0) {
       toast({
         title: "No files selected",
-        description: "Please select at least one file to analyze",
-        variant: "destructive"
+        description: "Please select at least one file to analyze.",
+        variant: "destructive",
       });
       return;
     }
 
-    const selectedFileData = allFiles.filter(file => file && file.path && selectedFiles.has(file.path));
-    
-    // Navigate to analyzer page with selected files
-    navigate('/analyzer', {
-      state: {
-        repoFiles: selectedFileData,
-        repoName: currentAnalysisRepo?.name,
-        autoStart: true
-      }
-    });
-
-    // Close modal
+    console.log("Starting analysis with selected files:", Array.from(selectedFiles));
     setShowFileSelectionModal(false);
-    setSelectedFiles(new Set());
-    setRepoFiles({});
-    setAllFiles([]);
-    setCurrentAnalysisRepo(null);
+    setIsAnalyzing(true);
+
+    try {
+      // Get selected files content
+      const selectedFilesData = allFiles.filter(file => 
+        selectedFiles.has(file.path)
+      );
+
+      // Call the analysis edge function
+      const { data, error } = await supabase.functions.invoke('analyze-github-code', {
+        body: {
+          files: selectedFilesData,
+          repoName: currentAnalysisRepo?.name
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Analysis failed');
+      }
+
+      if (data?.analysis) {
+        setAnalysisResult(data.analysis);
+        setShowAnalysisModal(true);
+        toast({
+          title: "Analysis Complete",
+          description: `Successfully analyzed ${selectedFiles.size} files from ${currentAnalysisRepo?.name}.`,
+        });
+      } else {
+        throw new Error('No analysis result received');
+      }
+    } catch (error: any) {
+      console.error("Analysis failed:", error);
+      toast({
+        title: "Analysis Failed",
+        description: error.message || "An error occurred during analysis.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+      setSelectedFiles(new Set());
+      setRepoFiles({});
+      setAllFiles([]);
+      setCurrentAnalysisRepo(null);
+    }
   };
 
   const startAnalysis = async (files: any[]) => {
@@ -983,6 +1014,20 @@ const GitHubConnect = () => {
                 >
                   Start Analysis ({selectedFiles.size} files)
                 </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Analysis Results Modal */}
+        <Dialog open={showAnalysisModal} onOpenChange={setShowAnalysisModal}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Analysis Report - {currentAnalysisRepo?.name}</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              <div className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-lg prose prose-sm max-w-none">
+                {formatAnalysis(analysisResult)}
               </div>
             </div>
           </DialogContent>
