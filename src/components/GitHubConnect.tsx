@@ -170,8 +170,10 @@ const GitHubConnect = () => {
       // Refresh connection status after saving
       await checkGitHubConnection();
       
-      // Refresh connection status after saving
-      await checkGitHubConnection();
+      toast({
+        title: "GitHub Connected Successfully!",
+        description: `Connected to ${normalized.login}'s GitHub account. Loading repositories...`,
+      });
     } catch (error: any) {
       console.error('💥 Error saving GitHub connection:', error);
       toast({
