@@ -29,6 +29,14 @@ const GitHubConnect = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [githubAccessToken, setGithubAccessToken] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<any>(null);
+  
+  // Analysis state
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState("");
+  const [analyzedFiles, setAnalyzedFiles] = useState<any[]>([]);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [currentRepo, setCurrentRepo] = useState<Repository | null>(null);
+  
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -322,6 +330,7 @@ const GitHubConnect = () => {
 
     try {
       setIsLoading(true);
+      setCurrentRepo(repo);
       
       const authToken = (await supabase.auth.getSession()).data.session?.access_token;
       
@@ -342,14 +351,9 @@ const GitHubConnect = () => {
       }
 
       if (response.data?.files) {
-        // Navigate to analyzer with the fetched files
-        navigate('/analyzer', { 
-          state: { 
-            repoFiles: response.data.files,
-            repoName: repo.name,
-            repoDescription: repo.description
-          } 
-        });
+        setAnalyzedFiles(response.data.files);
+        setShowAnalysis(true);
+        await startAnalysis(response.data.files);
       }
     } catch (error: any) {
       console.error('Error analyzing repository:', error);
@@ -361,6 +365,148 @@ const GitHubConnect = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const startAnalysis = async (files: any[]) => {
+    setIsAnalyzing(true);
+    setAnalysis("");
+
+    try {
+      const SUPABASE_URL = "https://wfywmkdqyuucxftpvmfj.supabase.co";
+      const authToken = (await supabase.auth.getSession()).data.session?.access_token;
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmeXdta2RxeXV1Y3hmdHB2bWZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NjkwNjEsImV4cCI6MjA3MTE0NTA2MX0.elHXCxBIqmz0IlcuOcKlY0gnIB88wK4rgbbpz9be244";
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/analyze-codebase`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken || SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          analysisId: `github-${currentRepo?.id}-${Date.now()}`,
+          files: files.map(file => ({
+            name: file.path,
+            content: file.content || '',
+            type: file.type || 'other'
+          })),
+          isDirectAnalysis: true
+        })
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error('Failed to start analysis');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.type === 'delta' && data.text) {
+                setAnalysis(prev => prev + data.text);
+              } else if (data.type === 'complete') {
+                setIsAnalyzing(false);
+                toast({
+                  title: "Analysis completed",
+                  description: `Successfully analyzed ${files.length} files.`,
+                });
+              }
+            } catch (e) {
+              // Skip invalid JSON
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Analysis failed:', error);
+      setIsAnalyzing(false);
+      toast({
+        title: "Analysis failed",
+        description: "There was an error analyzing your files. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatAnalysis = (text: string) => {
+    if (!text) return null;
+
+    const lines = text.split('\n');
+    const elements: React.ReactNode[] = [];
+    let currentIndex = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      if (line.startsWith('# ')) {
+        elements.push(
+          <h1 key={currentIndex++} className="text-2xl font-bold mt-6 mb-3 text-foreground">
+            {line.substring(2)}
+          </h1>
+        );
+      } else if (line.startsWith('## ')) {
+        elements.push(
+          <h2 key={currentIndex++} className="text-xl font-semibold mt-5 mb-2 text-foreground">
+            {line.substring(3)}
+          </h2>
+        );
+      } else if (line.startsWith('### ')) {
+        elements.push(
+          <h3 key={currentIndex++} className="text-lg font-medium mt-4 mb-2 text-foreground">
+            {line.substring(4)}
+          </h3>
+        );
+      } else if (line.startsWith('```')) {
+        let codeBlock = '';
+        i++;
+        while (i < lines.length && !lines[i].startsWith('```')) {
+          codeBlock += lines[i] + '\n';
+          i++;
+        }
+        elements.push(
+          <pre key={currentIndex++} className="bg-muted p-4 rounded-lg my-3 overflow-x-auto">
+            <code className="text-sm text-muted-foreground">{codeBlock}</code>
+          </pre>
+        );
+      } else if (line.startsWith('- ')) {
+        const listItems = [line];
+        while (i + 1 < lines.length && lines[i + 1].startsWith('- ')) {
+          i++;
+          listItems.push(lines[i]);
+        }
+        elements.push(
+          <ul key={currentIndex++} className="list-disc list-inside my-3 space-y-1">
+            {listItems.map((item, idx) => (
+              <li key={idx} className="text-muted-foreground">{item.substring(2)}</li>
+            ))}
+          </ul>
+        );
+      } else if (line.trim() !== '') {
+        const boldRegex = /\*\*(.*?)\*\*/g;
+        const parts = line.split(boldRegex);
+        const formattedLine = parts.map((part, idx) => 
+          idx % 2 === 1 ? <strong key={idx} className="font-semibold">{part}</strong> : part
+        );
+        
+        elements.push(
+          <p key={currentIndex++} className="mb-2 text-muted-foreground leading-relaxed">
+            {formattedLine}
+          </p>
+        );
+      }
+    }
+
+    return elements;
   };
 
   const handleDisconnect = async () => {
@@ -406,6 +552,83 @@ const GitHubConnect = () => {
     repo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     repo.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (showAnalysis) {
+    return (
+      <div className="min-h-screen pt-20 px-6">
+        <div className="max-w-full mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-2xl font-bold mb-1">
+                Analysis: {currentRepo?.name}
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                {currentRepo?.description}
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAnalysis(false)}
+            >
+              Back to Repositories
+            </Button>
+          </div>
+
+          <div className="flex gap-6 h-[calc(100vh-8rem)]">
+            {/* Left Panel - Files */}
+            <div className="w-1/3 bg-card/50 backdrop-blur-sm rounded-lg border p-4 overflow-y-auto">
+              <h3 className="font-semibold mb-4 text-sm uppercase tracking-wide text-muted-foreground">
+                Repository Files ({analyzedFiles.length})
+              </h3>
+              <div className="space-y-2">
+                {analyzedFiles.map((file, index) => (
+                  <div 
+                    key={index}
+                    className="p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                  >
+                    <div className="text-sm font-medium truncate">{file.path}</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {file.type} • {file.content ? `${file.content.length} chars` : 'Empty'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Panel - Analysis */}
+            <div className="flex-1 bg-card/50 backdrop-blur-sm rounded-lg border p-6 overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
+                  Analysis Report
+                </h3>
+                {isAnalyzing && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                    Analyzing...
+                  </div>
+                )}
+              </div>
+
+              {analysis ? (
+                <div className="prose prose-sm max-w-none">
+                  {formatAnalysis(analysis)}
+                </div>
+              ) : isAnalyzing ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Analyzing repository files...</p>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No analysis available</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-20 px-6">
