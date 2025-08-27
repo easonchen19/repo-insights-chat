@@ -1,8 +1,9 @@
-import { Github, Sparkles, Code, Brain, Zap, Upload } from "lucide-react";
+import { Github, Sparkles, Code, Brain, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import UploadButton from "@/components/UploadButton";
 
 const Hero = () => {
   const { user } = useAuth();
@@ -34,20 +35,7 @@ const Hero = () => {
         
         <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
           {user ? (
-            <>
-              <Button variant="hero" size="lg" asChild>
-                <NavLink to="/analyzer" className="flex items-center gap-2">
-                  <Upload className="w-5 h-5" />
-                  Upload Files
-                </NavLink>
-              </Button>
-              <Button variant="glow" size="lg" asChild>
-                <NavLink to="/github" className="flex items-center gap-2">
-                  <Github className="w-5 h-5" />
-                  Connect GitHub
-                </NavLink>
-              </Button>
-            </>
+            <UploadButton variant="hero" size="default" />
           ) : (
             <Button variant="hero" size="lg" asChild>
               <NavLink to="/auth">Get Started</NavLink>
