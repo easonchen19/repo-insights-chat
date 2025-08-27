@@ -29,6 +29,7 @@ const GitHubConnect = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [githubAccessToken, setGithubAccessToken] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<any>(null);
+  const [showRepositories, setShowRepositories] = useState(false);
   
   // Analysis state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -101,8 +102,7 @@ const GitHubConnect = () => {
         console.log('✅ GitHub connection found, setting connected state');
         setIsConnected(true);
         setUserInfo({ username: profile.github_username });
-        // Automatically fetch repositories when connected
-        await fetchRepositories();
+        // Don't automatically fetch repositories - wait for user to click "Show Repo"
       } else {
         console.log('❌ No GitHub connection found');
         setIsConnected(false);
@@ -260,7 +260,12 @@ const GitHubConnect = () => {
       }
 
       if (isConnected) {
-        await fetchRepositories();
+        if (!showRepositories) {
+          setShowRepositories(true);
+          await fetchRepositories();
+        } else {
+          setShowRepositories(false);
+        }
         return;
       }
 
@@ -680,7 +685,7 @@ const GitHubConnect = () => {
               ) : (
                 <>
                   <Github className="w-4 h-4 mr-2" />
-                  Show Repo
+                  {isConnected ? (showRepositories ? 'Hide Repo' : 'Show Repo') : 'Connect GitHub'}
                 </>
               )}
             </Button>
@@ -704,7 +709,7 @@ const GitHubConnect = () => {
           </Card>
         )}
 
-        {isConnected && (
+        {isConnected && showRepositories && (
           <div>
 
             {repositories.length > 0 && (
