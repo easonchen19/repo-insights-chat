@@ -364,15 +364,19 @@ const GitHubConnect = () => {
       }
 
       if (response.data?.files) {
-        // Organize files by folder structure for better display
-        const organizedFiles = organizeFilesByFolder(response.data.files);
+        // Normalize files to always have a `path` field
+        const normalizedFiles = response.data.files.map((f: any) => ({
+          ...f,
+          path: typeof f?.path === 'string' ? f.path : f?.name || '',
+        })).filter((f: any) => f.path);
+
+        // Organize files by first-level folder structure for better display
+        const organizedFiles = organizeFilesByFolder(normalizedFiles);
         setRepoFiles(organizedFiles);
-        setAllFiles(response.data.files);
+        setAllFiles(normalizedFiles);
         setCurrentAnalysisRepo(repo);
         // Select all files by default (only valid ones)
-        const allFilePaths = response.data.files
-          .filter((file: any) => file && file.path && typeof file.path === 'string')
-          .map((file: any) => file.path);
+        const allFilePaths = normalizedFiles.map((file: any) => file.path);
         setSelectedFiles(new Set(allFilePaths));
         setShowFileSelectionModal(true);
       }
