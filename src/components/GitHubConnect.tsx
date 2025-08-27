@@ -4,6 +4,8 @@ import { Github, Search, Star, GitBranch, Calendar, ExternalLink } from "lucide-
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,6 +32,12 @@ const GitHubConnect = () => {
   const [githubAccessToken, setGithubAccessToken] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [showRepositories, setShowRepositories] = useState(false);
+  
+  // File selection modal state
+  const [showFileSelectionModal, setShowFileSelectionModal] = useState(false);
+  const [repoFiles, setRepoFiles] = useState<any[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [currentAnalysisRepo, setCurrentAnalysisRepo] = useState<Repository | null>(null);
   
   // Analysis state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -355,14 +363,11 @@ const GitHubConnect = () => {
       }
 
       if (response.data?.files) {
-        // Navigate to analyzer page with repo files
-        navigate('/analyzer', {
-          state: {
-            repoFiles: response.data.files,
-            repoName: repo.name,
-            autoStart: true // Flag to auto-start analysis
-          }
-        });
+        // Show file selection modal instead of navigating immediately
+        setRepoFiles(response.data.files);
+        setCurrentAnalysisRepo(repo);
+        setSelectedFiles(new Set(response.data.files.map((file: any) => file.path))); // Select all files by default
+        setShowFileSelectionModal(true);
       }
     } catch (error: any) {
       console.error('Error analyzing repository:', error);
@@ -374,6 +379,54 @@ const GitHubConnect = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleFileSelection = (filePath: string, checked: boolean) => {
+    setSelectedFiles(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(filePath);
+      } else {
+        newSet.delete(filePath);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedFiles(new Set(repoFiles.map(file => file.path)));
+    } else {
+      setSelectedFiles(new Set());
+    }
+  };
+
+  const handleStartAnalysis = () => {
+    if (selectedFiles.size === 0) {
+      toast({
+        title: "No files selected",
+        description: "Please select at least one file to analyze",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const selectedFileData = repoFiles.filter(file => selectedFiles.has(file.path));
+    
+    // Navigate to analyzer page with selected files
+    navigate('/analyzer', {
+      state: {
+        repoFiles: selectedFileData,
+        repoName: currentAnalysisRepo?.name,
+        autoStart: true
+      }
+    });
+
+    // Close modal
+    setShowFileSelectionModal(false);
+    setSelectedFiles(new Set());
+    setRepoFiles([]);
+    setCurrentAnalysisRepo(null);
   };
 
   const startAnalysis = async (files: any[]) => {
@@ -808,6 +861,73 @@ const GitHubConnect = () => {
             )}
           </div>
         )}
+        
+        {/* File Selection Modal */}
+        <Dialog open={showFileSelectionModal} onOpenChange={setShowFileSelectionModal}>
+          <DialogContent className="max-w-4xl max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle>Select Files to Analyze - {currentAnalysisRepo?.name}</DialogTitle>
+            </DialogHeader>
+            
+            <div className="flex flex-col h-[60vh]">
+              {/* Select All Controls */}
+              <div className="flex items-center justify-between mb-4 p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="select-all"
+                    checked={selectedFiles.size === repoFiles.length && repoFiles.length > 0}
+                    onCheckedChange={handleSelectAll}
+                  />
+                  <label htmlFor="select-all" className="font-medium">
+                    Select All ({selectedFiles.size}/{repoFiles.length} files selected)
+                  </label>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {repoFiles.length} files found
+                </div>
+              </div>
+
+              {/* File List */}
+              <div className="flex-1 overflow-y-auto border rounded-lg p-4 space-y-2">
+                {repoFiles.map((file, index) => (
+                  <div 
+                    key={index}
+                    className="flex items-center space-x-3 p-2 hover:bg-muted/50 rounded transition-colors"
+                  >
+                    <Checkbox
+                      id={`file-${index}`}
+                      checked={selectedFiles.has(file.path)}
+                      onCheckedChange={(checked) => handleFileSelection(file.path, checked as boolean)}
+                    />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium truncate">{file.path}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {file.type} • {file.content ? `${file.content.length} chars` : 'Empty'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowFileSelectionModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  variant="hero"
+                  onClick={handleStartAnalysis}
+                  disabled={selectedFiles.size === 0}
+                >
+                  Start Analysis ({selectedFiles.size} files)
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
