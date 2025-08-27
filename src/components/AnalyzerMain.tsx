@@ -122,13 +122,21 @@ export const AnalyzerMain = ({
       }));
       
       setUploadedFiles(githubFiles);
+      setShowTwoPanel(true);
       
       toast({
         title: `Repository "${state.repoName}" loaded`,
         description: `${githubFiles.length} files ready for analysis from GitHub`,
       });
+
+      // Auto-start analysis if autoStart flag is present
+      if (state.autoStart && currentAnalysis) {
+        setTimeout(() => {
+          startAnalysis();
+        }, 500); // Small delay to ensure UI is ready
+      }
     }
-  }, [location.state, toast]);
+  }, [location.state, toast, currentAnalysis]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();

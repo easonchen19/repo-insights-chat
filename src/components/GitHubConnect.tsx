@@ -330,7 +330,6 @@ const GitHubConnect = () => {
 
     try {
       setIsLoading(true);
-      setCurrentRepo(repo);
       
       const authToken = (await supabase.auth.getSession()).data.session?.access_token;
       
@@ -351,9 +350,14 @@ const GitHubConnect = () => {
       }
 
       if (response.data?.files) {
-        setAnalyzedFiles(response.data.files);
-        setShowAnalysis(true);
-        await startAnalysis(response.data.files);
+        // Navigate to analyzer page with repo files
+        navigate('/analyzer', {
+          state: {
+            repoFiles: response.data.files,
+            repoName: repo.name,
+            autoStart: true // Flag to auto-start analysis
+          }
+        });
       }
     } catch (error: any) {
       console.error('Error analyzing repository:', error);
