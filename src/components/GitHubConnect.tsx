@@ -369,8 +369,10 @@ const GitHubConnect = () => {
         setRepoFiles(organizedFiles);
         setAllFiles(response.data.files);
         setCurrentAnalysisRepo(repo);
-        // Select all files by default
-        const allFilePaths = response.data.files.map((file: any) => file.path);
+        // Select all files by default (only valid ones)
+        const allFilePaths = response.data.files
+          .filter((file: any) => file && file.path && typeof file.path === 'string')
+          .map((file: any) => file.path);
         setSelectedFiles(new Set(allFilePaths));
         setShowFileSelectionModal(true);
       }
@@ -393,6 +395,12 @@ const GitHubConnect = () => {
     };
 
     files.forEach(file => {
+      // Skip files without a valid path
+      if (!file || !file.path || typeof file.path !== 'string') {
+        console.warn('Skipping file with invalid path:', file);
+        return;
+      }
+
       const pathParts = file.path.split('/');
       
       if (pathParts.length === 1) {
@@ -425,7 +433,11 @@ const GitHubConnect = () => {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedFiles(new Set(allFiles.map(file => file.path)));
+      // Filter out files without valid paths
+      const validFilePaths = allFiles
+        .filter(file => file && file.path && typeof file.path === 'string')
+        .map(file => file.path);
+      setSelectedFiles(new Set(validFilePaths));
     } else {
       setSelectedFiles(new Set());
     }
@@ -441,7 +453,7 @@ const GitHubConnect = () => {
       return;
     }
 
-    const selectedFileData = allFiles.filter(file => selectedFiles.has(file.path));
+    const selectedFileData = allFiles.filter(file => file && file.path && selectedFiles.has(file.path));
     
     // Navigate to analyzer page with selected files
     navigate('/analyzer', {
