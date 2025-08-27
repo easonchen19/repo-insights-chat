@@ -9,7 +9,14 @@ const corsHeaders = {
 interface FileData {
   path: string;
   content: string;
+  type?: string;
 }
+
+type SafeFile = Required<Pick<FileData, 'path' | 'content'>> & { type?: string };
+
+const MAX_FILES = 40;
+const MAX_CHARS_PER_FILE = 4000;
+const TOTAL_CHAR_BUDGET = 120_000;
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -18,90 +25,119 @@ serve(async (req) => {
   }
 
   try {
-    const { files, repoName } = await req.json();
-    
+    const body = await req.json().catch(() => ({}));
+    const { files, repoName } = body as { files?: FileData[]; repoName?: string };
+
     if (!files || !Array.isArray(files) || files.length === 0) {
-      throw new Error('No files provided for analysis');
+      return new Response(JSON.stringify({ error: 'No files provided for analysis' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const claudeApiKey = Deno.env.get('CLAUDE_API_KEY');
     if (!claudeApiKey) {
-      throw new Error('Claude API key not configured');
+      return new Response(JSON.stringify({ error: 'Claude API key not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // Prepare the code content for analysis
-    const codeContent = files.map((file: FileData) => {
-      return `**File: ${file.path}**\n\`\`\`\n${file.content}\n\`\`\`\n`;
-    }).join('\n\n');
+    // Sanitize, filter and truncate files
+    const sanitized: SafeFile[] = files
+      .filter((f): f is FileData => !!f && typeof (f as any).content === 'string')
+      .map((f) => ({
+        path: typeof (f as any).path === 'string' && (f as any).path.length ? (f as any).path : (f as any).name || 'unknown',
+        content: (f as any).content || '',
+        type: (f as any).type,
+      }))
+      .filter((f) => f.path && f.content);
 
-    const prompt = `Please analyze this ${repoName} codebase and provide a comprehensive report. Focus on:
+    if (sanitized.length === 0) {
+      return new Response(JSON.stringify({ error: 'No valid files with content provided' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-1. **Project Overview**: What does this project do? What's its main purpose?
-2. **Architecture & Structure**: How is the code organized? What patterns are used?
-3. **Key Components**: What are the main components/modules and their responsibilities?
-4. **Technology Stack**: What technologies, frameworks, and libraries are being used?
-5. **Code Quality**: Overall code quality, best practices, potential issues
-6. **Recommendations**: Suggestions for improvements or areas of concern
+    // Apply per-file truncation and overall budget
+    const limited: SafeFile[] = [];
+    let remaining = TOTAL_CHAR_BUDGET;
 
-Here's the codebase to analyze:
+    for (const file of sanitized.slice(0, MAX_FILES)) {
+      if (remaining <= 0) break;
+      const sliceLen = Math.min(MAX_CHARS_PER_FILE, Math.max(0, remaining));
+      const truncated = file.content.slice(0, sliceLen);
+      if (!truncated) continue;
+      remaining -= truncated.length;
+      limited.push({ ...file, content: truncated });
+    }
 
-${codeContent}
+    // Build prompt with clear boundaries
+    const header = `Analyze the selected files from the repository "${repoName || 'repository'}" and produce a clear, structured report with:
+- Project overview
+- Architecture & structure
+- Key components and responsibilities
+- Technology stack
+- Code quality observations (performance, security, readability)
+- Concrete recommendations (prioritized)
 
-Please provide a detailed, well-structured analysis that would be helpful for understanding this project.`;
+Use concise sections and bullet points where helpful.`;
 
-    console.log('Sending request to Claude API...');
-    
+    const codeSections = limited
+      .map((f) => `FILE: ${f.path}\nTYPE: ${f.type || 'text'}\n-----\n${f.content}\n\n`)
+      .join("\n\n");
+
+    const userContent = `${header}\n\n${codeSections}`;
+
+    console.log('📦 analyze-github-code: files received:', files.length, 'valid:', sanitized.length, 'limited:', limited.length, 'budgetLeft:', remaining);
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${claudeApiKey}`,
         'Content-Type': 'application/json',
         'x-api-key': claudeApiKey,
-        'anthropic-version': '2023-06-01'
+        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 4000,
-        temperature: 0.7,
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 3000,
+        temperature: 0.5,
         messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
+          { role: 'user', content: userContent }
+        ],
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Claude API error:', response.status, errorText);
-      throw new Error(`Claude API error: ${response.status} - ${errorText}`);
+      console.error('❌ Claude API error:', response.status, errorText);
+      return new Response(JSON.stringify({ error: `Claude API error: ${response.status}`, details: errorText }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const data = await response.json();
-    console.log('Claude API response received');
-    
-    const analysis = data.content[0]?.text;
-    
+    const analysis = data?.content?.[0]?.text || data?.content?.[0]?.content || '';
+
     if (!analysis) {
-      throw new Error('No analysis content received from Claude API');
+      console.error('⚠️ No analysis content returned by Claude');
+      return new Response(JSON.stringify({ error: 'No analysis content received from Claude API' }), {
+        status: 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    return new Response(JSON.stringify({ 
-      analysis,
-      filesAnalyzed: files.length,
-      repoName 
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
+    return new Response(
+      JSON.stringify({ analysis, filesAnalyzed: limited.length, repoName: repoName || null }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
-    console.error('Error in analyze-github-code function:', error);
-    return new Response(JSON.stringify({ 
-      error: error.message || 'An unexpected error occurred during analysis'
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error('💥 Error in analyze-github-code function:', error);
+    return new Response(
+      JSON.stringify({ error: error?.message || 'Unexpected error', stack: (error as any)?.stack }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 });

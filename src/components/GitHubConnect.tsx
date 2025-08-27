@@ -469,10 +469,30 @@ const GitHubConnect = () => {
         selectedFiles.has(file.path)
       );
 
+      // Apply client-side limits to avoid oversized request payloads
+      const MAX_FILES = 40;
+      const MAX_CHARS_PER_FILE = 4000;
+      const TOTAL_CHAR_BUDGET = 120000;
+
+      let remaining = TOTAL_CHAR_BUDGET;
+      const payloadFiles = [] as any[];
+      for (const f of selectedFilesData.slice(0, MAX_FILES)) {
+        if (remaining <= 0) break;
+        const sliceLen = Math.min(MAX_CHARS_PER_FILE, Math.max(0, remaining));
+        const content = (f.content || '').slice(0, sliceLen);
+        if (!content) continue;
+        remaining -= content.length;
+        payloadFiles.push({ path: f.path || f.name, content, type: f.type });
+      }
+
+      if (payloadFiles.length === 0) {
+        throw new Error('Selected files are empty or too large to analyze. Try selecting fewer files.');
+      }
+
       // Call the analysis edge function
       const { data, error } = await supabase.functions.invoke('analyze-github-code', {
         body: {
-          files: selectedFilesData,
+          files: payloadFiles,
           repoName: currentAnalysisRepo?.name
         }
       });
@@ -500,10 +520,7 @@ const GitHubConnect = () => {
       });
     } finally {
       setIsAnalyzing(false);
-      setSelectedFiles(new Set());
-      setRepoFiles({});
-      setAllFiles([]);
-      setCurrentAnalysisRepo(null);
+      // Keep context for the modal; cleanup happens when modal closes
     }
   };
 
