@@ -82,6 +82,26 @@
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
     --ring: 270 91% 65%;
+
+    /* Light Mode Custom Design Tokens */
+    --gradient-primary: linear-gradient(135deg, hsl(270 91% 65%), hsl(280 100% 70%));
+    --gradient-secondary: linear-gradient(180deg, hsl(300 20% 97%), hsl(300 12% 92%));
+    --gradient-hero: linear-gradient(135deg, hsl(270 91% 65% / 0.1), hsl(280 100% 70% / 0.08));
+    --gradient-vibe: linear-gradient(45deg, hsl(270 91% 65%), hsl(280 100% 70%), hsl(290 100% 75%));
+    --gradient-dark: linear-gradient(135deg, hsl(300 20% 97%), hsl(300 12% 92%), hsl(280 15% 88%));
+    
+    --shadow-elegant: 0 15px 40px -15px hsl(270 91% 65% / 0.3);
+    --shadow-glow: 0 0 50px hsl(280 100% 70% / 0.25);
+    --shadow-deep: 0 25px 60px -20px hsl(270 91% 65% / 0.4);
+
+    --sidebar-background: 300 12% 92%;
+    --sidebar-foreground: 240 10% 8%;
+    --sidebar-primary: 270 91% 65%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 300 20% 97%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 240 5.9% 90%;
+    --sidebar-ring: 270 91% 65%;
   }
 }
 
