@@ -35,7 +35,8 @@ const GitHubConnect = () => {
   
   // File selection modal state
   const [showFileSelectionModal, setShowFileSelectionModal] = useState(false);
-  const [repoFiles, setRepoFiles] = useState<any[]>([]);
+  const [repoFiles, setRepoFiles] = useState<{ [key: string]: any[] }>({});
+  const [allFiles, setAllFiles] = useState<any[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [currentAnalysisRepo, setCurrentAnalysisRepo] = useState<Repository | null>(null);
   
@@ -363,10 +364,14 @@ const GitHubConnect = () => {
       }
 
       if (response.data?.files) {
-        // Show file selection modal instead of navigating immediately
-        setRepoFiles(response.data.files);
+        // Organize files by folder structure for better display
+        const organizedFiles = organizeFilesByFolder(response.data.files);
+        setRepoFiles(organizedFiles);
+        setAllFiles(response.data.files);
         setCurrentAnalysisRepo(repo);
-        setSelectedFiles(new Set(response.data.files.map((file: any) => file.path))); // Select all files by default
+        // Select all files by default
+        const allFilePaths = response.data.files.map((file: any) => file.path);
+        setSelectedFiles(new Set(allFilePaths));
         setShowFileSelectionModal(true);
       }
     } catch (error: any) {
@@ -379,6 +384,31 @@ const GitHubConnect = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Helper function to organize files by folder structure (first level only)
+  const organizeFilesByFolder = (files: any[]) => {
+    const organized: { [key: string]: any[] } = {
+      'root': [] // Files in the root directory
+    };
+
+    files.forEach(file => {
+      const pathParts = file.path.split('/');
+      
+      if (pathParts.length === 1) {
+        // Root level file
+        organized.root.push(file);
+      } else {
+        // File in a folder
+        const folderName = pathParts[0];
+        if (!organized[folderName]) {
+          organized[folderName] = [];
+        }
+        organized[folderName].push(file);
+      }
+    });
+
+    return organized;
   };
 
   const handleFileSelection = (filePath: string, checked: boolean) => {
@@ -395,7 +425,7 @@ const GitHubConnect = () => {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedFiles(new Set(repoFiles.map(file => file.path)));
+      setSelectedFiles(new Set(allFiles.map(file => file.path)));
     } else {
       setSelectedFiles(new Set());
     }
@@ -411,7 +441,7 @@ const GitHubConnect = () => {
       return;
     }
 
-    const selectedFileData = repoFiles.filter(file => selectedFiles.has(file.path));
+    const selectedFileData = allFiles.filter(file => selectedFiles.has(file.path));
     
     // Navigate to analyzer page with selected files
     navigate('/analyzer', {
@@ -425,7 +455,8 @@ const GitHubConnect = () => {
     // Close modal
     setShowFileSelectionModal(false);
     setSelectedFiles(new Set());
-    setRepoFiles([]);
+    setRepoFiles({});
+    setAllFiles([]);
     setCurrentAnalysisRepo(null);
   };
 
@@ -875,36 +906,48 @@ const GitHubConnect = () => {
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="select-all"
-                    checked={selectedFiles.size === repoFiles.length && repoFiles.length > 0}
+                    checked={selectedFiles.size === allFiles.length && allFiles.length > 0}
                     onCheckedChange={handleSelectAll}
                   />
                   <label htmlFor="select-all" className="font-medium">
-                    Select All ({selectedFiles.size}/{repoFiles.length} files selected)
+                    Select All ({selectedFiles.size}/{allFiles.length} files selected)
                   </label>
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {repoFiles.length} files found
+                  {allFiles.length} files found
                 </div>
               </div>
 
-              {/* File List */}
-              <div className="flex-1 overflow-y-auto border rounded-lg p-4 space-y-2">
-                {repoFiles.map((file, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-center space-x-3 p-2 hover:bg-muted/50 rounded transition-colors"
-                  >
-                    <Checkbox
-                      id={`file-${index}`}
-                      checked={selectedFiles.has(file.path)}
-                      onCheckedChange={(checked) => handleFileSelection(file.path, checked as boolean)}
-                    />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium truncate">{file.path}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {file.type} • {file.content ? `${file.content.length} chars` : 'Empty'}
-                      </div>
+              {/* File List with Folder Structure */}
+              <div className="flex-1 overflow-y-auto border rounded-lg p-4 space-y-4">
+                {Object.entries(repoFiles).map(([folderName, files]) => (
+                  <div key={folderName} className="space-y-2">
+                    {/* Folder Header */}
+                    <div className="text-sm font-semibold text-muted-foreground bg-muted/30 px-2 py-1 rounded">
+                      📁 {folderName === 'root' ? '(Root Directory)' : folderName} ({files.length} files)
                     </div>
+                    
+                    {/* Files in Folder */}
+                    {files.map((file, index) => (
+                      <div 
+                        key={`${folderName}-${index}`}
+                        className="flex items-center space-x-3 p-2 ml-4 hover:bg-muted/50 rounded transition-colors"
+                      >
+                        <Checkbox
+                          id={`file-${folderName}-${index}`}
+                          checked={selectedFiles.has(file.path)}
+                          onCheckedChange={(checked) => handleFileSelection(file.path, checked as boolean)}
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium truncate">
+                            {folderName === 'root' ? file.path : file.path.split('/').slice(1).join('/')}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {file.type} • {file.content ? `${file.content.length} chars` : 'Empty'}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
