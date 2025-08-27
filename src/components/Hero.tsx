@@ -41,6 +41,11 @@ const Hero = () => {
               <NavLink to="/auth">Get Started</NavLink>
             </Button>
           )}
+          
+          <Button variant="glow" size="lg" className="group">
+            <Github className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+            Connect GitHub
+          </Button>
         </div>
         
         {/* Feature Cards */}
