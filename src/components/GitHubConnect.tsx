@@ -297,34 +297,30 @@ const GitHubConnect = () => {
       return;
     }
 
-    console.log('🔗 Starting GitHub OAuth connection...');
+    console.log('🔗 Starting GitHub OAuth connection for existing user...');
     setIsLoading(true);
     
     try {
-      // Sign in with GitHub OAuth through Supabase
-      const { error } = await supabase.auth.signInWithOAuth({
+      // Use linkIdentity to link GitHub to existing account
+      const { error } = await supabase.auth.linkIdentity({
         provider: 'github',
         options: {
           scopes: 'repo read:user',
           redirectTo: `${window.location.origin}/github`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
         }
       });
 
       if (error) {
-        console.error('❌ OAuth error:', error);
+        console.error('❌ Link identity error:', error);
         throw error;
       }
 
-      console.log('✅ OAuth initiated successfully');
+      console.log('✅ GitHub account linking initiated successfully');
     } catch (error: any) {
-      console.error('💥 GitHub OAuth error:', error);
+      console.error('💥 GitHub linking error:', error);
       toast({
         title: "Connection failed",
-        description: error.message || "Failed to connect to GitHub",
+        description: error.message || "Failed to link GitHub account",
         variant: "destructive"
       });
       setIsLoading(false);
