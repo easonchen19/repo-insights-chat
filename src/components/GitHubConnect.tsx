@@ -1,12 +1,16 @@
 
 import { useState, useEffect } from "react";
-import { Github, Search, Star, GitBranch, Calendar, ExternalLink, Copy, Lightbulb } from "lucide-react";
+import { Github, Search, Star, GitBranch, Calendar, ExternalLink, Copy, Lightbulb, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -48,6 +52,9 @@ const GitHubConnect = () => {
   const [currentRepo, setCurrentRepo] = useState<Repository | null>(null);
   const [analysisResult, setAnalysisResult] = useState<string>("");
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [featureInput, setFeatureInput] = useState('');
+  const [generatedPrompt, setGeneratedPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
   
   const copyToClipboard = async (text: string) => {
     try {
@@ -55,6 +62,52 @@ const GitHubConnect = () => {
       toast({ title: "Copied to clipboard", description: "Prompt copied successfully!" });
     } catch (err) {
       toast({ title: "Copy failed", description: "Please copy manually.", variant: "destructive" });
+    }
+  };
+
+  const generatePrompt = async (repo: Repository) => {
+    if (!featureInput.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a feature description.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const codebaseInfo = {
+        language: repo.language,
+        type: repo.language?.toLowerCase().includes('javascript') || repo.language?.toLowerCase().includes('typescript') ? 'web app' : 
+              repo.language?.toLowerCase().includes('swift') || repo.language?.toLowerCase().includes('kotlin') ? 'mobile app' : 'backend',
+        description: repo.description,
+        name: repo.name
+      };
+      
+      const { data, error } = await supabase.functions.invoke('generate-prompt', {
+        body: {
+          feature: featureInput,
+          codebaseInfo
+        }
+      });
+
+      if (error) throw error;
+
+      setGeneratedPrompt(data.generatedPrompt);
+      toast({
+        title: "Prompt generated!",
+        description: "Your optimized prompt has been generated successfully.",
+      });
+    } catch (error) {
+      console.error('Error generating prompt:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate prompt. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -1243,39 +1296,108 @@ const GitHubConnect = () => {
                                 Prompt Strategy
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                            <DialogContent className="max-w-4xl max-h-[80vh]">
                               <DialogHeader>
                                 <DialogTitle className="flex items-center gap-2">
                                   <Lightbulb className="w-5 h-5 text-primary" />
                                   AI Prompt Strategy for {repo.name}
                                 </DialogTitle>
+                                <DialogDescription>
+                                  Generate optimized prompts for your {repo.language} codebase
+                                </DialogDescription>
                               </DialogHeader>
-                              <div className="space-y-4">
-                                <p className="text-sm text-muted-foreground">
-                                  Contextual prompts tailored for your {repo.language} codebase. Click any prompt to copy it:
-                                </p>
-                                <div className="grid gap-3">
-                                  {generateContextualPrompts(repo).map((s, i) => (
-                                    <div key={i} className="border border-border rounded-lg p-4">
-                                      <div className="flex items-start justify-between mb-2">
-                                        <h4 className="font-semibold text-foreground">{s.title}</h4>
-                                        <Button variant="ghost" size="sm" className="text-xs" onClick={() => copyToClipboard(s.prompt)}>
-                                          <Copy className="w-3 h-3 mr-1" /> Copy
-                                        </Button>
+                              <ScrollArea className="max-h-[60vh]">
+                                <div className="space-y-6">
+                                  {/* Feature Input Section */}
+                                  <div className="space-y-3">
+                                    <Label htmlFor="feature-input" className="text-sm font-semibold">
+                                      Describe the feature you want to implement:
+                                    </Label>
+                                    <Textarea
+                                      id="feature-input"
+                                      placeholder="e.g., Add user authentication with login/logout functionality"
+                                      value={featureInput}
+                                      onChange={(e) => setFeatureInput(e.target.value)}
+                                      className="min-h-[80px]"
+                                    />
+                                    <Button
+                                      onClick={() => generatePrompt(repo)}
+                                      disabled={isGenerating || !featureInput.trim()}
+                                      className="w-full"
+                                    >
+                                      {isGenerating ? (
+                                        <>
+                                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                          Generating...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Send className="h-4 w-4 mr-2" />
+                                          Generate Optimized Prompt
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
+
+                                  {/* Generated Prompt Section */}
+                                  {generatedPrompt && (
+                                    <>
+                                      <Separator />
+                                      <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                          <h4 className="font-semibold text-sm">Generated Prompt</h4>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => copyToClipboard(generatedPrompt)}
+                                            className="h-8"
+                                          >
+                                            <Copy className="h-4 w-4 mr-1" />
+                                            Copy
+                                          </Button>
+                                        </div>
+                                        <div className="text-sm bg-muted p-4 rounded-md whitespace-pre-wrap">
+                                          {generatedPrompt}
+                                        </div>
                                       </div>
-                                      <p className="text-sm text-muted-foreground leading-relaxed">{s.prompt}</p>
+                                    </>
+                                  )}
+                                  
+                                  <Separator />
+                                  
+                                  {/* Predefined Prompts */}
+                                  <div className="space-y-4">
+                                    <h4 className="font-semibold text-sm">Quick Start Prompts</h4>
+                                    <div className="grid gap-3">
+                                      {generateContextualPrompts(repo).map((s, i) => (
+                                        <div key={i} className="border border-border rounded-lg p-4">
+                                          <div className="flex items-start justify-between mb-2">
+                                            <h5 className="font-medium text-foreground">{s.title}</h5>
+                                            <Button variant="ghost" size="sm" className="text-xs" onClick={() => copyToClipboard(s.prompt)}>
+                                              <Copy className="w-3 h-3 mr-1" /> Copy
+                                            </Button>
+                                          </div>
+                                          <p className="text-sm text-muted-foreground leading-relaxed">{s.prompt}</p>
+                                        </div>
+                                      ))}
                                     </div>
-                                  ))}
+                                  </div>
+                                  
+                                  <Separator />
+                                  
+                                  <div className="space-y-3">
+                                    <h4 className="font-semibold text-sm">Pro Tips for {repo.language}</h4>
+                                    <ul className="text-sm text-muted-foreground space-y-2">
+                                      {getLanguageSpecificTips(repo.language).map((tip, i) => (
+                                        <li key={i} className="flex items-start gap-2">
+                                          <span className="text-primary font-bold mt-1">•</span>
+                                          {tip}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
                                 </div>
-                                <div className="border-t border-border pt-3">
-                                  <h4 className="font-semibold mb-2 text-foreground">Pro Tips for {repo.language}</h4>
-                                  <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                                    {getLanguageSpecificTips(repo.language).map((tip, i) => (
-                                      <li key={i}>{tip}</li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              </div>
+                              </ScrollArea>
                             </DialogContent>
                           </Dialog>
                         </div>
