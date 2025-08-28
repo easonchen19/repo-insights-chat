@@ -105,9 +105,9 @@ const WorkflowCircle = () => {
             
             return (
               <div key={step.id} className={`relative flex flex-col items-center group ${gridPosition}`}>
-                {/* Circular Step Card */}
+                {/* Circular Step Card - Made 2 sizes smaller */}
                 <div className={`
-                  relative w-72 h-72 rounded-full flex flex-col items-center justify-center transition-all duration-700 transform
+                  relative w-60 h-60 rounded-full flex flex-col items-center justify-center transition-all duration-700 transform
                   backdrop-blur-xl border shadow-2xl
                   ${isActive 
                     ? `bg-gradient-to-br ${step.bgGradient} border-${step.glowColor} shadow-${step.glowColor}/50 scale-110` 
