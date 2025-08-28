@@ -397,6 +397,17 @@ const GitHubConnect = () => {
       return;
     }
 
+    // Check if the current email user already has a GitHub account associated
+    if (user.app_metadata?.provider === 'email') {
+      toast({
+        title: "No GitHub Account Found",
+        description: "There is no GitHub account associated with your login email. Please login with another email or login with GitHub directly!",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+      return;
+    }
+
     console.log('🔗 Starting GitHub OAuth connection for existing user...');
     setIsLoading(true);
     
