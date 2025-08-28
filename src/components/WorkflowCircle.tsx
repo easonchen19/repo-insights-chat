@@ -70,28 +70,18 @@ const WorkflowCircle = () => {
   }, []);
 
   return (
-    <div className="w-full min-h-[1200px] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl border border-slate-700/50 p-12 relative overflow-visible">{/* Increased height, padding and made overflow visible */}
-      {/* Animated Background Grid */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/10 to-transparent animate-pulse"></div>
-        <div className="grid grid-cols-12 h-full w-full">
-          {Array.from({ length: 144 }).map((_, i) => (
-            <div key={i} className="border-r border-b border-slate-700/30 animate-pulse" style={{ animationDelay: `${i * 50}ms` }}></div>
-          ))}
-        </div>
-      </div>
-
-      {/* Header */}
+    <div className="w-full min-h-[1200px] p-12 relative overflow-visible">{/* Removed separate background and border - now blends with page */}
+      {/* Header - now matches main theme */}
       <div className="text-center mb-12 relative z-10">
-        <div className="inline-flex items-center gap-3 px-6 py-3 bg-slate-800/60 backdrop-blur-lg rounded-full mb-6 border border-slate-600/30 shadow-2xl">
-          <Brain className="w-6 h-6 text-cyan-400 animate-pulse" />
-          <span className="text-lg font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+        <div className="inline-flex items-center gap-3 px-6 py-3 bg-card/60 backdrop-blur-lg rounded-full mb-6 border border-primary/30 shadow-glow">
+          <Brain className="w-6 h-6 text-primary animate-pulse" />
+          <span className="text-lg font-bold bg-gradient-vibe bg-clip-text text-transparent">
             AI Partner - Continuous Evolution
           </span>
         </div>
-        <p className="text-slate-300 text-lg max-w-3xl mx-auto leading-relaxed">
+        <p className="text-foreground/70 text-lg max-w-3xl mx-auto leading-relaxed">
           An infinite loop of intelligent development where each step flows seamlessly into the next, 
-          creating a <span className="text-cyan-400 font-semibold">continuous cycle</span> of improvement and innovation.
+          creating a <span className="text-primary font-semibold">continuous cycle</span> of improvement and innovation.
         </p>
       </div>
       
@@ -110,9 +100,9 @@ const WorkflowCircle = () => {
                   backdrop-blur-xl border shadow-2xl
                   ${isActive 
                     ? `bg-gradient-to-br ${step.bgGradient} border-${step.glowColor} shadow-${step.glowColor}/50 scale-110 rotate-1` 
-                    : 'bg-slate-800/40 border-slate-600/30 hover:bg-slate-700/50 hover:scale-105'
+                    : 'bg-card/40 border-primary/20 hover:bg-card/60 hover:scale-105'
                   }
-                  ${isNextActive ? 'ring-2 ring-cyan-400/50 animate-pulse' : ''}
+                  ${isNextActive ? 'ring-2 ring-primary/50 animate-pulse' : ''}
                 `}>
                   
                   {/* Floating Particles */}
@@ -136,11 +126,11 @@ const WorkflowCircle = () => {
                   {/* Glowing Step Number Badge */}
                   <div 
                     className={`
-                      absolute -top-4 -left-4 w-12 h-12 rounded-full border-4 border-slate-900 
+                      absolute -top-4 -left-4 w-12 h-12 rounded-full border-4 border-background 
                       flex items-center justify-center font-bold text-lg transition-all duration-500
                       ${isActive 
                         ? `bg-${step.glowColor} text-white shadow-lg shadow-${step.glowColor}/60 animate-pulse scale-125` 
-                        : 'bg-slate-700 text-slate-300'
+                        : 'bg-muted text-muted-foreground'
                       }
                     `}
                   >
@@ -152,21 +142,21 @@ const WorkflowCircle = () => {
                     w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 transition-all duration-500
                     ${isActive 
                       ? `bg-${step.glowColor} shadow-lg shadow-${step.glowColor}/60 animate-bounce` 
-                      : 'bg-slate-700/50'
+                      : 'bg-muted/50'
                     }
                   `}>
-                    <Icon className={`w-10 h-10 transition-all duration-500 ${isActive ? 'text-white' : 'text-slate-300'}`} />
+                    <Icon className={`w-10 h-10 transition-all duration-500 ${isActive ? 'text-white' : 'text-muted-foreground'}`} />
                   </div>
                   
                   {/* Content with Glow Effect */}
                   <div className="text-center">
                     <h3 className={`font-bold text-xl mb-3 transition-all duration-500 ${
-                      isActive ? 'text-white' : 'text-slate-200'
+                      isActive ? 'text-white' : 'text-foreground'
                     }`}>
                       {step.title}
                     </h3>
                     <p className={`text-sm leading-relaxed transition-all duration-500 ${
-                      isActive ? 'text-slate-100' : 'text-slate-400'
+                      isActive ? 'text-white/90' : 'text-muted-foreground'
                     }`}>
                       {step.description}
                     </p>
@@ -242,12 +232,12 @@ const WorkflowCircle = () => {
           {/* Central Holographic Core */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
             <div className="relative">
-              <div className="w-40 h-40 rounded-full bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10 border-2 border-dashed border-cyan-400/30 flex items-center justify-center backdrop-blur-sm animate-spin-slow">
-                <div className="w-24 h-24 rounded-full bg-slate-800/80 border border-cyan-400/50 flex items-center justify-center backdrop-blur-lg">
+              <div className="w-40 h-40 rounded-full bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 border-2 border-dashed border-primary/30 flex items-center justify-center backdrop-blur-sm animate-spin-slow">
+                <div className="w-24 h-24 rounded-full bg-card/80 border border-primary/50 flex items-center justify-center backdrop-blur-lg">
                   <div className="text-center">
-                    <Brain className="w-8 h-8 text-cyan-400 mx-auto mb-1 animate-pulse" />
-                    <div className="text-xs font-bold text-cyan-400">INFINITE</div>
-                    <div className="text-xs font-bold text-purple-400">LOOP</div>
+                    <Brain className="w-8 h-8 text-primary mx-auto mb-1 animate-pulse" />
+                    <div className="text-xs font-bold text-primary">INFINITE</div>
+                    <div className="text-xs font-bold text-accent">LOOP</div>
                   </div>
                 </div>
               </div>
@@ -256,7 +246,7 @@ const WorkflowCircle = () => {
               {Array.from({ length: 8 }).map((_, i) => (
                 <div
                   key={i}
-                  className="absolute w-2 h-2 bg-cyan-400 rounded-full animate-ping"
+                  className="absolute w-2 h-2 bg-primary rounded-full animate-ping"
                   style={{
                     left: '50%',
                     top: '50%',
@@ -277,7 +267,7 @@ const WorkflowCircle = () => {
           <div
             key={index}
             className={`w-3 h-3 rounded-full transition-all duration-500 ${
-              index === activeStep ? 'bg-cyan-400 shadow-lg shadow-cyan-400/60' : 'bg-slate-600'
+              index === activeStep ? 'bg-primary shadow-lg shadow-primary/60' : 'bg-muted'
             }`}
           ></div>
         ))}
