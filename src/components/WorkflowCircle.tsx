@@ -66,7 +66,7 @@ const WorkflowCircle = () => {
       </div>
       
       <div className="flex justify-center items-center h-full">
-        <div className="grid grid-cols-3 grid-rows-2 gap-8 max-w-6xl w-full relative">
+        <div className="grid grid-cols-3 grid-rows-2 gap-24 max-w-7xl w-full relative px-16 py-12">{/* 3x more spacing */}
           {steps.map((step, index) => {
             const Icon = step.icon;
             const isLastStep = index === steps.length - 1;
@@ -98,38 +98,69 @@ const WorkflowCircle = () => {
                   </div>
                 </div>
                 
-                {/* Arrow */}
+                {/* Enhanced Arrows with Better Positioning */}
                 {showArrow && (
-                  <div className="absolute -right-4 top-1/2 transform -translate-y-1/2 z-10">
-                    {index < 2 && (
-                      <ArrowRight 
-                        className="w-8 h-8 text-primary animate-pulse" 
-                        style={{ color: step.color }}
-                      />
+                  <>
+                    {/* Horizontal arrows for top row (steps 1->2) */}
+                    {index === 0 && (
+                      <div className="absolute -right-12 top-1/2 transform -translate-y-1/2 z-10">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-16 h-1 bg-gradient-to-r from-purple-500 to-emerald-500 rounded-full"></div>
+                          <ArrowRight className="w-10 h-10 text-emerald-500 drop-shadow-lg animate-pulse" />
+                        </div>
+                      </div>
                     )}
+                    
+                    {/* Horizontal arrows for top row (steps 2->3) */}
+                    {index === 1 && (
+                      <div className="absolute -right-12 top-1/2 transform -translate-y-1/2 z-10">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-16 h-1 bg-gradient-to-r from-emerald-500 to-amber-500 rounded-full"></div>
+                          <ArrowRight className="w-10 h-10 text-amber-500 drop-shadow-lg animate-pulse" />
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Vertical arrow down (step 3->4) */}
                     {index === 2 && (
-                      <div className="flex flex-col items-center">
-                        <ArrowRight 
-                          className="w-8 h-8 text-primary animate-pulse rotate-90" 
-                          style={{ color: step.color }}
-                        />
+                      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-12 z-10">
+                        <div className="flex flex-col items-center space-y-2">
+                          <div className="w-1 h-16 bg-gradient-to-b from-amber-500 to-red-500 rounded-full"></div>
+                          <ArrowRight className="w-10 h-10 text-red-500 drop-shadow-lg animate-pulse rotate-90" />
+                        </div>
                       </div>
                     )}
-                    {index >= 3 && index < 5 && (
-                      <ArrowRight 
-                        className="w-8 h-8 text-primary animate-pulse rotate-180" 
-                        style={{ color: step.color }}
-                      />
+                    
+                    {/* Horizontal arrows for bottom row (steps 4<-5) */}
+                    {index === 3 && (
+                      <div className="absolute -left-12 top-1/2 transform -translate-y-1/2 z-10">
+                        <div className="flex items-center space-x-2">
+                          <ArrowRight className="w-10 h-10 text-pink-500 drop-shadow-lg animate-pulse rotate-180" />
+                          <div className="w-16 h-1 bg-gradient-to-l from-red-500 to-pink-500 rounded-full"></div>
+                        </div>
+                      </div>
                     )}
+                    
+                    {/* Horizontal arrows for bottom row (steps 5<-6) */}
+                    {index === 4 && (
+                      <div className="absolute -left-12 top-1/2 transform -translate-y-1/2 z-10">
+                        <div className="flex items-center space-x-2">
+                          <ArrowRight className="w-10 h-10 text-cyan-500 drop-shadow-lg animate-pulse rotate-180" />
+                          <div className="w-16 h-1 bg-gradient-to-l from-pink-500 to-cyan-500 rounded-full"></div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Vertical arrow up (step 6->1) */}
                     {index === 5 && (
-                      <div className="flex flex-col items-center">
-                        <ArrowRight 
-                          className="w-8 h-8 text-primary animate-pulse -rotate-90" 
-                          style={{ color: step.color }}
-                        />
+                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-12 z-10">
+                        <div className="flex flex-col items-center space-y-2">
+                          <ArrowRight className="w-10 h-10 text-purple-500 drop-shadow-lg animate-pulse -rotate-90" />
+                          <div className="w-1 h-16 bg-gradient-to-t from-cyan-500 to-purple-500 rounded-full"></div>
+                        </div>
                       </div>
                     )}
-                  </div>
+                  </>
                 )}
               </div>
             );
