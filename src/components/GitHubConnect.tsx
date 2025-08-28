@@ -1,10 +1,10 @@
 
 import { useState, useEffect } from "react";
-import { Github, Search, Star, GitBranch, Calendar, ExternalLink } from "lucide-react";
+import { Github, Search, Star, GitBranch, Calendar, ExternalLink, Copy, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +48,58 @@ const GitHubConnect = () => {
   const [currentRepo, setCurrentRepo] = useState<Repository | null>(null);
   const [analysisResult, setAnalysisResult] = useState<string>("");
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Copied to clipboard", description: "Prompt copied successfully!" });
+    } catch (err) {
+      toast({ title: "Copy failed", description: "Please copy manually.", variant: "destructive" });
+    }
+  };
+
+  const ghSamplePrompts: { title: string; prompt: string }[] = [
+    {
+      title: "Add Authentication System",
+      prompt:
+        "Implement a full email/password auth flow using Supabase: create /auth page with login + signup, persist sessions, redirect when logged in, protect private routes, add logout, handle errors, and include a simple profile section."
+    },
+    {
+      title: "Implement One-off Payments (Stripe)",
+      prompt:
+        "Integrate Stripe one-off payments using a Supabase Edge Function (mode: payment). Add a 'Buy' button that calls the function and redirects to Checkout. Include success/cancel pages and basic error handling."
+    },
+    {
+      title: "Onboard New Users",
+      prompt:
+        "Create a 3-step onboarding wizard (welcome, preferences, first action). Persist progress, allow skipping, show progress bar, mobile-friendly, and store settings to Supabase for the logged-in user."
+    },
+    {
+      title: "Add Header Navigation Menu",
+      prompt:
+        "Build a responsive header with brand logo, main nav links, a user menu (when signed in), and a hamburger menu for mobile. Include keyboard navigation, focus states, and match the app's design tokens."
+    },
+    {
+      title: "Add File Uploads",
+      prompt:
+        "Create drag-and-drop + browse file uploads with validation, progress bars, multiple files support, and previews for images. Show toasts for success/errors and keep the design consistent with the existing UI."
+    },
+    {
+      title: "Create Search + Filters",
+      prompt:
+        "Implement search with debounce and filters (checkboxes, select, date range). Show result count, clear filters, and maintain URL query params for shareable filtered views."
+    },
+    {
+      title: "Add Dark/Light Theme Toggle",
+      prompt:
+        "Add a theme toggle that persists user preference. Ensure all components look great in both themes using the existing design tokens and proper contrast."
+    },
+    {
+      title: "Improve Accessibility",
+      prompt:
+        "Audit and improve accessibility: aria labels, roles, keyboard navigation, focus outlines, proper color contrast, and semantic HTML across pages."
+    }
+  ];
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -1079,6 +1131,49 @@ const GitHubConnect = () => {
                           >
                             Analyze Code
                           </Button>
+                          
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="outline">
+                                <Lightbulb className="w-4 h-4 mr-2" />
+                                Prompt Strategy
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                  <Lightbulb className="w-5 h-5 text-primary" />
+                                  AI Prompt Strategy Guide
+                                </DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <p className="text-sm text-muted-foreground">
+                                  Ready-to-use prompts for building common features. Click any prompt to copy it:
+                                </p>
+                                <div className="grid gap-3">
+                                  {ghSamplePrompts.map((s, i) => (
+                                    <div key={i} className="border border-border rounded-lg p-4">
+                                      <div className="flex items-start justify-between mb-2">
+                                        <h4 className="font-semibold text-foreground">{s.title}</h4>
+                                        <Button variant="ghost" size="sm" className="text-xs" onClick={() => copyToClipboard(s.prompt)}>
+                                          <Copy className="w-3 h-3 mr-1" /> Copy
+                                        </Button>
+                                      </div>
+                                      <p className="text-sm text-muted-foreground leading-relaxed">{s.prompt}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="border-t border-border pt-3">
+                                  <h4 className="font-semibold mb-2 text-foreground">Pro Tips</h4>
+                                  <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                                    <li>State exactly what to build, where, and how it should look.</li>
+                                    <li>Mention error handling, accessibility, and responsiveness.</li>
+                                    <li>Reference existing components and design tokens.</li>
+                                  </ul>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
                         </div>
                       </div>
                     </Card>
