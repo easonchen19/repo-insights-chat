@@ -87,31 +87,30 @@ const WorkflowCircle = () => {
       
       <div className="flex justify-center items-center h-full relative z-10">
         <div className="grid grid-cols-3 grid-rows-2 gap-32 max-w-8xl w-full relative px-20 py-16">
-          {/* Render steps with custom positioning - reverse bottom row */}
           {steps.map((step, index) => {
             const Icon = step.icon;
             const isActive = index === activeStep;
             const isNextActive = (activeStep + 1) % steps.length === index;
             
-            // Rearrange positions: top row 1,2,3 - bottom row 6,5,4 (reversed)
+            // Layout: Top row 1,2,3 (left to right) | Bottom row 6,5,4 (left to right)
             let gridPosition = '';
             if (index <= 2) {
-              // Top row: normal order
+              // Top row: 1,2,3 (normal order)
               gridPosition = `col-start-${index + 1} row-start-1`;
             } else {
-              // Bottom row: reverse order (4,5,6 becomes 6,5,4)
-              const reversedIndex = 6 - index; // 4->3, 5->2, 6->1
-              gridPosition = `col-start-${reversedIndex} row-start-2`;
+              // Bottom row: 6,5,4 (index 5,4,3 -> positions 1,2,3)
+              const positionIndex = index === 5 ? 1 : index === 4 ? 2 : 3; // 6->1, 5->2, 4->3
+              gridPosition = `col-start-${positionIndex} row-start-2`;
             }
             
             return (
               <div key={step.id} className={`relative flex flex-col items-center group ${gridPosition}`}>
-                {/* Holographic Step Card */}
+                {/* Circular Step Card */}
                 <div className={`
-                  relative p-8 rounded-3xl transition-all duration-700 transform w-full max-w-sm
+                  relative w-72 h-72 rounded-full flex flex-col items-center justify-center transition-all duration-700 transform
                   backdrop-blur-xl border shadow-2xl
                   ${isActive 
-                    ? `bg-gradient-to-br ${step.bgGradient} border-${step.glowColor} shadow-${step.glowColor}/50 scale-110 rotate-1` 
+                    ? `bg-gradient-to-br ${step.bgGradient} border-${step.glowColor} shadow-${step.glowColor}/50 scale-110` 
                     : 'bg-card/40 border-primary/20 hover:bg-card/60 hover:scale-105'
                   }
                   ${isNextActive ? 'ring-2 ring-primary/50 animate-pulse' : ''}
@@ -119,14 +118,14 @@ const WorkflowCircle = () => {
                   
                   {/* Floating Particles */}
                   {isActive && (
-                    <div className="absolute inset-0 overflow-hidden rounded-3xl">
-                      {Array.from({ length: 6 }).map((_, i) => (
+                    <div className="absolute inset-0 overflow-hidden rounded-full">
+                      {Array.from({ length: 8 }).map((_, i) => (
                         <div
                           key={i}
                           className={`absolute w-1 h-1 bg-${step.glowColor} rounded-full animate-ping`}
                           style={{
-                            left: `${20 + (i * 15)}%`,
-                            top: `${10 + (i * 15)}%`,
+                            left: `${30 + Math.cos((i * 45) * Math.PI / 180) * 30}%`,
+                            top: `${30 + Math.sin((i * 45) * Math.PI / 180) * 30}%`,
                             animationDelay: `${i * 200}ms`,
                             animationDuration: '2s'
                           }}
@@ -138,8 +137,8 @@ const WorkflowCircle = () => {
                   {/* Glowing Step Number Badge */}
                   <div 
                     className={`
-                      absolute -top-4 -left-4 w-12 h-12 rounded-full border-4 border-background 
-                      flex items-center justify-center font-bold text-lg transition-all duration-500
+                      absolute -top-6 left-1/2 transform -translate-x-1/2 w-12 h-12 rounded-full border-4 border-background 
+                      flex items-center justify-center font-bold text-lg transition-all duration-500 z-10
                       ${isActive 
                         ? `bg-${step.glowColor} text-white shadow-lg shadow-${step.glowColor}/60 animate-pulse scale-125` 
                         : 'bg-muted text-muted-foreground'
@@ -151,7 +150,7 @@ const WorkflowCircle = () => {
                   
                   {/* Holographic Icon */}
                   <div className={`
-                    w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 transition-all duration-500
+                    w-20 h-20 rounded-full flex items-center justify-center mb-4 transition-all duration-500
                     ${isActive 
                       ? `bg-${step.glowColor} shadow-lg shadow-${step.glowColor}/60 animate-bounce` 
                       : 'bg-muted/50'
@@ -161,26 +160,32 @@ const WorkflowCircle = () => {
                   </div>
                   
                   {/* Content with Glow Effect */}
-                  <div className="text-center">
-                    <h3 className={`font-bold text-xl mb-3 transition-all duration-500 ${
+                  <div className="text-center px-4">
+                    <h3 className={`font-bold text-lg mb-2 transition-all duration-500 ${
                       isActive ? 'text-white' : 'text-foreground'
                     }`}>
                       {step.title}
                     </h3>
-                    <p className={`text-sm leading-relaxed transition-all duration-500 ${
+                    <p className={`text-xs leading-relaxed transition-all duration-500 ${
                       isActive ? 'text-white/90' : 'text-muted-foreground'
                     }`}>
                       {step.description}
                     </p>
                   </div>
                 </div>
-                
-                {/* Futuristic Connection Lines */}
-                {index < steps.length && (
-                  <>
-                    {/* Horizontal arrows for top row */}
+                {/* New Arrow System: 1→2, 2→3, 3→4, 4→5, 5→6, 6→1 */}
+                {(
+                  (index === 0) || // 1→2
+                  (index === 1) || // 2→3  
+                  (index === 2) || // 3→4
+                  (index === 3) || // 4→5
+                  (index === 4) || // 5→6
+                  (index === 5)    // 6→1
+                ) && (
+                  <div className="absolute z-20">
+                    {/* 1→2: Horizontal right */}
                     {index === 0 && (
-                      <div className="absolute -right-16 top-1/2 transform -translate-y-1/2 z-20">
+                      <div className="absolute top-1/2 left-full transform -translate-y-1/2 translate-x-4">
                         <div className="flex items-center space-x-3">
                           <div className={`w-24 h-0.5 bg-gradient-to-r from-purple-500 to-emerald-500 rounded-full ${isActive ? 'animate-pulse shadow-lg shadow-purple-500/50' : ''}`}></div>
                           <ArrowRight className={`w-12 h-12 text-emerald-400 drop-shadow-2xl transition-all duration-500 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
@@ -188,8 +193,9 @@ const WorkflowCircle = () => {
                       </div>
                     )}
                     
+                    {/* 2→3: Horizontal right */}
                     {index === 1 && (
-                      <div className="absolute -right-16 top-1/2 transform -translate-y-1/2 z-20">
+                      <div className="absolute top-1/2 left-full transform -translate-y-1/2 translate-x-4">
                         <div className="flex items-center space-x-3">
                           <div className={`w-24 h-0.5 bg-gradient-to-r from-emerald-500 to-amber-500 rounded-full ${isActive ? 'animate-pulse shadow-lg shadow-emerald-500/50' : ''}`}></div>
                           <ArrowRight className={`w-12 h-12 text-amber-400 drop-shadow-2xl transition-all duration-500 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
@@ -197,19 +203,19 @@ const WorkflowCircle = () => {
                       </div>
                     )}
                     
-                    {/* Vertical arrow down (step 3 to step 4, but step 4 is now on the right) */}
+                    {/* 3→4: Diagonal down-right */}
                     {index === 2 && (
-                      <div className="absolute bottom-0 right-0 transform translate-x-16 translate-y-16 z-20">
+                      <div className="absolute bottom-0 right-0 transform translate-x-16 translate-y-16">
                         <div className="flex flex-col items-center space-y-3">
                           <div className={`w-0.5 h-24 bg-gradient-to-b from-amber-500 to-red-500 rounded-full ${isActive ? 'animate-pulse shadow-lg shadow-amber-500/50' : ''}`}></div>
-                          <ArrowRight className={`w-12 h-12 text-red-400 drop-shadow-2xl transition-all duration-500 rotate-45 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
+                          <ArrowRight className={`w-12 h-12 text-red-400 drop-shadow-2xl transition-all duration-500 rotate-135 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
                         </div>
                       </div>
                     )}
                     
-                    {/* Bottom row arrows - now reversed (step 4 to step 5) */}
+                    {/* 4→5: Horizontal left */}
                     {index === 3 && (
-                      <div className="absolute -left-16 top-1/2 transform -translate-y-1/2 z-20">
+                      <div className="absolute top-1/2 right-full transform -translate-y-1/2 -translate-x-4">
                         <div className="flex items-center space-x-3">
                           <ArrowRight className={`w-12 h-12 text-pink-400 drop-shadow-2xl transition-all duration-500 rotate-180 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
                           <div className={`w-24 h-0.5 bg-gradient-to-l from-red-500 to-pink-500 rounded-full ${isActive ? 'animate-pulse shadow-lg shadow-red-500/50' : ''}`}></div>
@@ -217,9 +223,9 @@ const WorkflowCircle = () => {
                       </div>
                     )}
                     
-                    {/* Step 5 to step 6 */}
+                    {/* 5→6: Horizontal left */}
                     {index === 4 && (
-                      <div className="absolute -left-16 top-1/2 transform -translate-y-1/2 z-20">
+                      <div className="absolute top-1/2 right-full transform -translate-y-1/2 -translate-x-4">
                         <div className="flex items-center space-x-3">
                           <ArrowRight className={`w-12 h-12 text-cyan-400 drop-shadow-2xl transition-all duration-500 rotate-180 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
                           <div className={`w-24 h-0.5 bg-gradient-to-l from-pink-500 to-cyan-500 rounded-full ${isActive ? 'animate-pulse shadow-lg shadow-pink-500/50' : ''}`}></div>
@@ -227,16 +233,16 @@ const WorkflowCircle = () => {
                       </div>
                     )}
                     
-                    {/* Diagonal arrow from step 6 back to step 1 */}
+                    {/* 6→1: Diagonal up-right */}
                     {index === 5 && (
-                      <div className="absolute top-0 left-0 transform -translate-x-16 -translate-y-16 z-20">
+                      <div className="absolute top-0 right-0 transform translate-x-16 -translate-y-16">
                         <div className="flex flex-col items-center space-y-3">
                           <ArrowRight className={`w-12 h-12 text-purple-400 drop-shadow-2xl transition-all duration-500 -rotate-45 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
                           <div className={`w-0.5 h-24 bg-gradient-to-t from-cyan-500 to-purple-500 rounded-full ${isActive ? 'animate-pulse shadow-lg shadow-cyan-500/50' : ''}`}></div>
                         </div>
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
             );
