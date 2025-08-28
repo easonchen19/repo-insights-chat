@@ -70,7 +70,7 @@ const WorkflowCircle = () => {
   }, []);
 
   return (
-    <div className="w-full h-[900px] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl border border-slate-700/50 p-8 relative overflow-hidden">
+    <div className="w-full min-h-[1200px] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl border border-slate-700/50 p-12 relative overflow-visible">{/* Increased height, padding and made overflow visible */}
       {/* Animated Background Grid */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/10 to-transparent animate-pulse"></div>

@@ -7,47 +7,51 @@
 
 @layer base {
   :root {
-    --background: 255 3% 6%;
-    --foreground: 280 20% 95%;
+    /* High-Tech Dark Theme - Space/Sci-Fi Aesthetic */
+    --background: 220 15% 6%;    /* Deep dark space */
+    --foreground: 200 20% 95%;   /* Bright cyan-white */
 
-    --card: 260 8% 10%;
-    --card-foreground: 280 15% 92%;
+    --card: 220 15% 8%;          /* Dark glassmorphic cards */
+    --card-foreground: 200 15% 92%;
 
-    --popover: 260 8% 8%;
-    --popover-foreground: 280 15% 92%;
+    --popover: 220 15% 7%;
+    --popover-foreground: 200 15% 92%;
 
-    --primary: 270 100% 35%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 200 100% 50%;     /* Bright cyan */
+    --primary-foreground: 220 15% 6%;
 
-    --secondary: 255 6% 12%;
-    --secondary-foreground: 280 10% 85%;
+    --secondary: 220 10% 12%;    /* Dark secondary */
+    --secondary-foreground: 200 10% 85%;
 
-    --muted: 260 6% 15%;
-    --muted-foreground: 260 5% 65%;
+    --muted: 220 8% 15%;         /* Muted dark */
+    --muted-foreground: 220 5% 65%;
 
-    --accent: 285 100% 60%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 285 100% 60%;      /* Purple accent */
+    --accent-foreground: 220 15% 6%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 260 4% 18%;
-    --input: 260 4% 18%;
-    --ring: 270 100% 35%;
+    --border: 220 8% 18%;        /* Subtle borders */
+    --input: 220 8% 18%;
+    --ring: 200 100% 50%;        /* Cyan focus ring */
 
-    /* Custom Design Tokens - Deep Purple Vibe Theme */
-    --gradient-primary: linear-gradient(135deg, hsl(270 100% 35%), hsl(285 100% 60%));
-    --gradient-secondary: linear-gradient(180deg, hsl(255 3% 6%), hsl(260 8% 10%));
-    --gradient-hero: linear-gradient(135deg, hsl(270 100% 35% / 0.2), hsl(285 100% 60% / 0.15));
-    --gradient-vibe: linear-gradient(45deg, hsl(270 100% 35%), hsl(285 100% 60%), hsl(300 100% 70%));
-    --gradient-dark: linear-gradient(135deg, hsl(255 3% 6%), hsl(260 8% 10%), hsl(270 10% 15%));
+    /* High-Tech Design Tokens - Cyberpunk/Sci-Fi Theme */
+    --gradient-primary: linear-gradient(135deg, hsl(200 100% 50%), hsl(285 100% 60%));
+    --gradient-secondary: linear-gradient(180deg, hsl(220 15% 6%), hsl(220 15% 10%));
+    --gradient-hero: linear-gradient(135deg, hsl(200 100% 50% / 0.1), hsl(285 100% 60% / 0.1), hsl(340 100% 70% / 0.05));
+    --gradient-vibe: linear-gradient(45deg, hsl(200 100% 50%), hsl(285 100% 60%), hsl(340 100% 70%));
+    --gradient-dark: linear-gradient(135deg, hsl(220 15% 4%), hsl(220 15% 8%), hsl(200 20% 12%));
+    --gradient-glow: linear-gradient(135deg, hsl(200 100% 50% / 0.3), hsl(285 100% 60% / 0.2));
     
-    --shadow-elegant: 0 15px 40px -15px hsl(270 100% 35% / 0.5);
-    --shadow-glow: 0 0 50px hsl(285 100% 60% / 0.4);
-    --shadow-deep: 0 25px 60px -20px hsl(270 100% 35% / 0.6);
+    --shadow-elegant: 0 15px 40px -15px hsl(200 100% 50% / 0.4);
+    --shadow-glow: 0 0 50px hsl(200 100% 50% / 0.3);
+    --shadow-deep: 0 25px 60px -20px hsl(200 100% 50% / 0.5);
+    --shadow-neon: 0 0 20px hsl(200 100% 50% / 0.6), 0 0 40px hsl(200 100% 50% / 0.4), 0 0 60px hsl(200 100% 50% / 0.2);
     
     --animation-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     --animation-bounce: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.8);
+    --animation-glow: glow 2s ease-in-out infinite alternate;
     --animation-pulse: all 2s cubic-bezier(0.4, 0, 0.6, 1);
 
     --radius: 0.5rem;
