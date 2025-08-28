@@ -998,14 +998,9 @@ const GitHubConnect = () => {
               <Github className="w-8 h-8 text-primary" />
             </div>
             <h3 className="text-xl font-semibold mb-2">Connect GitHub Account</h3>
-            <p className="text-muted-foreground mb-4">
-              Click "Connect GitHub" to link your GitHub account and view your repositories
+            <p className="text-muted-foreground">
+              Click "Show Repo" to connect your GitHub account and view your repositories
             </p>
-            <div className="mt-4 p-4 bg-muted/50 rounded-lg border-l-4 border-primary">
-              <p className="text-sm text-muted-foreground">
-                <strong>Note:</strong> To connect GitHub, please login with GitHub directly or use the email address associated with your GitHub account.
-              </p>
-            </div>
           </Card>
         )}
 
