@@ -88,16 +88,25 @@ const GitHubConnect = () => {
         const originalUserId = localStorage.getItem('originalUserId');
         
         if (isLinkingGitHub && originalUserId) {
-          console.log('🔗 Handling GitHub linking to existing email account');
-          // Save GitHub data to the original user's profile
-          await saveGitHubConnectionToUser(originalUserId, session.provider_token, session.user?.user_metadata || {});
+          console.log('🔗 Handling GitHub linking with data migration');
+          
+          // Migrate all user data from original email user to this GitHub user
+          await migrateUserData(originalUserId, session.user.id);
+          
+          // Save GitHub connection data to the new GitHub user profile
+          await saveGitHubConnection(session.provider_token, session.user?.user_metadata || {});
           
           // Clean up linking state
           localStorage.removeItem('linkingGitHub');
           localStorage.removeItem('originalUserId');
+          localStorage.removeItem('originalUserEmail');
           
-          // Sign out the GitHub user and navigate back to allow original user to continue
-          await supabase.auth.signOut();
+          toast({
+            title: "GitHub Connected & Data Migrated!",
+            description: "Your account is now fully connected with GitHub. All your projects and data have been transferred.",
+          });
+          
+          // Stay logged in as the GitHub user (don't sign out)
           window.location.href = '/github';
           return;
         } else {
@@ -200,6 +209,31 @@ const GitHubConnect = () => {
         description: error.message || "Failed to save GitHub connection",
         variant: "destructive"
       });
+    }
+  };
+
+  const migrateUserData = async (fromUserId: string, toUserId: string) => {
+    console.log('🔄 Migrating user data...', {
+      fromUserId,
+      toUserId
+    });
+    
+    try {
+      // Call the migration function in Supabase
+      const { error } = await supabase.rpc('migrate_user_data', {
+        from_user_id: fromUserId,
+        to_user_id: toUserId
+      });
+
+      if (error) {
+        console.error('❌ Migration error:', error);
+        throw error;
+      }
+
+      console.log('✅ User data migration completed successfully');
+    } catch (error: any) {
+      console.error('💥 Error migrating user data:', error);
+      throw new Error(`Failed to migrate user data: ${error.message}`);
     }
   };
 
@@ -367,9 +401,10 @@ const GitHubConnect = () => {
     setIsLoading(true);
     
     try {
-      // Store current user state to restore after GitHub OAuth
+      // Store current user state for migration after GitHub OAuth
       localStorage.setItem('linkingGitHub', 'true');
       localStorage.setItem('originalUserId', user.id);
+      localStorage.setItem('originalUserEmail', user.email || '');
       
       // Use signInWithOAuth but we'll handle the user merge in the callback
       const { error } = await supabase.auth.signInWithOAuth({
