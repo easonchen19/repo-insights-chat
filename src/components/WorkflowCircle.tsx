@@ -173,77 +173,7 @@ const WorkflowCircle = () => {
                     </p>
                   </div>
                 </div>
-                {/* New Arrow System: 1→2, 2→3, 3→4, 4→5, 5→6, 6→1 */}
-                {(
-                  (index === 0) || // 1→2
-                  (index === 1) || // 2→3  
-                  (index === 2) || // 3→4
-                  (index === 3) || // 4→5
-                  (index === 4) || // 5→6
-                  (index === 5)    // 6→1
-                ) && (
-                  <div className="absolute z-20">
-                    {/* 1→2: Horizontal right */}
-                    {index === 0 && (
-                      <div className="absolute top-1/2 left-full transform -translate-y-1/2 translate-x-4">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-24 h-0.5 bg-gradient-to-r from-purple-500 to-emerald-500 rounded-full ${isActive ? 'animate-pulse shadow-lg shadow-purple-500/50' : ''}`}></div>
-                          <ArrowRight className={`w-12 h-12 text-emerald-400 drop-shadow-2xl transition-all duration-500 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* 2→3: Horizontal right */}
-                    {index === 1 && (
-                      <div className="absolute top-1/2 left-full transform -translate-y-1/2 translate-x-4">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-24 h-0.5 bg-gradient-to-r from-emerald-500 to-amber-500 rounded-full ${isActive ? 'animate-pulse shadow-lg shadow-emerald-500/50' : ''}`}></div>
-                          <ArrowRight className={`w-12 h-12 text-amber-400 drop-shadow-2xl transition-all duration-500 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* 3→4: Diagonal down-right */}
-                    {index === 2 && (
-                      <div className="absolute bottom-0 right-0 transform translate-x-16 translate-y-16">
-                        <div className="flex flex-col items-center space-y-3">
-                          <div className={`w-0.5 h-24 bg-gradient-to-b from-amber-500 to-red-500 rounded-full ${isActive ? 'animate-pulse shadow-lg shadow-amber-500/50' : ''}`}></div>
-                          <ArrowRight className={`w-12 h-12 text-red-400 drop-shadow-2xl transition-all duration-500 rotate-135 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* 4→5: Horizontal left */}
-                    {index === 3 && (
-                      <div className="absolute top-1/2 right-full transform -translate-y-1/2 -translate-x-4">
-                        <div className="flex items-center space-x-3">
-                          <ArrowRight className={`w-12 h-12 text-pink-400 drop-shadow-2xl transition-all duration-500 rotate-180 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
-                          <div className={`w-24 h-0.5 bg-gradient-to-l from-red-500 to-pink-500 rounded-full ${isActive ? 'animate-pulse shadow-lg shadow-red-500/50' : ''}`}></div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* 5→6: Horizontal left */}
-                    {index === 4 && (
-                      <div className="absolute top-1/2 right-full transform -translate-y-1/2 -translate-x-4">
-                        <div className="flex items-center space-x-3">
-                          <ArrowRight className={`w-12 h-12 text-cyan-400 drop-shadow-2xl transition-all duration-500 rotate-180 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
-                          <div className={`w-24 h-0.5 bg-gradient-to-l from-pink-500 to-cyan-500 rounded-full ${isActive ? 'animate-pulse shadow-lg shadow-pink-500/50' : ''}`}></div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* 6→1: Diagonal up-right */}
-                    {index === 5 && (
-                      <div className="absolute top-0 right-0 transform translate-x-16 -translate-y-16">
-                        <div className="flex flex-col items-center space-y-3">
-                          <ArrowRight className={`w-12 h-12 text-purple-400 drop-shadow-2xl transition-all duration-500 -rotate-45 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
-                          <div className={`w-0.5 h-24 bg-gradient-to-t from-cyan-500 to-purple-500 rounded-full ${isActive ? 'animate-pulse shadow-lg shadow-cyan-500/50' : ''}`}></div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Arrows removed as requested */}
               </div>
             );
           })}
