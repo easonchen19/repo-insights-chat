@@ -110,7 +110,6 @@ Use concise sections and bullet points where helpful.`;
           model,
           max_tokens: 3000,
           temperature: 0.5,
-          stream: true, // Enable streaming
           messages: [
             { role: 'user', content: userContent }
           ],
@@ -130,65 +129,21 @@ Use concise sections and bullet points where helpful.`;
       });
     }
 
-    // Set up streaming response
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          const reader = response!.body?.getReader();
-          if (!reader) {
-            controller.close();
-            return;
-          }
+    const data = await response.json();
+    const analysis = data?.content?.[0]?.text || data?.content?.[0]?.content || '';
 
-          const decoder = new TextDecoder();
-          let buffer = '';
+    if (!analysis) {
+      console.error('⚠️ No analysis content returned by Claude');
+      return new Response(JSON.stringify({ error: 'No analysis content received from Claude API' }), {
+        status: 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const data = line.slice(6);
-                if (data === '[DONE]') {
-                  // Send completion signal
-                  controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ type: 'complete' })}\n\n`));
-                  continue;
-                }
-
-                try {
-                  const parsed = JSON.parse(data);
-                  if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-                    // Stream the text chunk
-                    const chunk = { type: 'delta', text: parsed.delta.text };
-                    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunk)}\n\n`));
-                  }
-                } catch (e) {
-                  // Skip invalid JSON
-                }
-              }
-            }
-          }
-        } catch (error) {
-          console.error('💥 Streaming error:', error);
-        } finally {
-          controller.close();
-        }
-      }
-    });
-
-    return new Response(stream, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
-    });
+    return new Response(
+      JSON.stringify({ analysis, filesAnalyzed: limited.length, repoName: repoName || null }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
     console.error('💥 Error in analyze-github-code function:', error);
     return new Response(

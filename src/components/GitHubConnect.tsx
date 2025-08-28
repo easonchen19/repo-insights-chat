@@ -460,10 +460,6 @@ const GitHubConnect = () => {
     }
 
     console.log("Starting analysis with selected files:", Array.from(selectedFiles));
-    
-    // Show modal immediately with loading state
-    setAnalysisResult("");
-    setShowAnalysisModal(true);
     setShowFileSelectionModal(false);
     setIsAnalyzing(true);
 
@@ -493,54 +489,27 @@ const GitHubConnect = () => {
         throw new Error('Selected files are empty or too large to analyze. Try selecting fewer files.');
       }
 
-      // Make streaming request to the edge function
-      const SUPABASE_URL = "https://wfywmkdqyuucxftpvmfj.supabase.co";
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/analyze-github-code`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Call the analysis edge function
+      const { data, error } = await supabase.functions.invoke('analyze-github-code', {
+        body: {
           files: payloadFiles,
           repoName: currentAnalysisRepo?.name
-        }),
+        }
       });
 
-      if (!response.ok || !response.body) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      if (error) {
+        throw new Error(error.message || 'Analysis failed');
       }
 
-      // Handle streaming response
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              
-              if (data.type === 'delta' && data.text) {
-                // Append text chunk to the analysis result
-                setAnalysisResult(prev => prev + data.text);
-              } else if (data.type === 'complete') {
-                setIsAnalyzing(false);
-                toast({
-                  title: "Analysis Complete",
-                  description: `Successfully analyzed ${selectedFiles.size} files from ${currentAnalysisRepo?.name}.`,
-                });
-              }
-            } catch (e) {
-              // Skip invalid JSON
-            }
-          }
-        }
+      if (data?.analysis) {
+        setAnalysisResult(data.analysis);
+        setShowAnalysisModal(true);
+        toast({
+          title: "Analysis Complete",
+          description: `Successfully analyzed ${selectedFiles.size} files from ${currentAnalysisRepo?.name}.`,
+        });
+      } else {
+        throw new Error('No analysis result received');
       }
     } catch (error: any) {
       console.error("Analysis failed:", error);
@@ -549,8 +518,8 @@ const GitHubConnect = () => {
         description: error.message || "An error occurred during analysis.",
         variant: "destructive",
       });
-      setIsAnalyzing(false);
     } finally {
+      setIsAnalyzing(false);
       // Keep context for the modal; cleanup happens when modal closes
     }
   };
@@ -1068,46 +1037,15 @@ const GitHubConnect = () => {
         </Dialog>
 
         {/* Analysis Results Modal */}
-        <Dialog open={showAnalysisModal} onOpenChange={(open) => {
-          setShowAnalysisModal(open);
-          if (!open) {
-            // Reset states when modal closes
-            setSelectedFiles(new Set());
-            setRepoFiles({});
-            setAllFiles([]);
-            setCurrentAnalysisRepo(null);
-            setAnalysisResult("");
-            setIsAnalyzing(false);
-          }
-        }}>
+        <Dialog open={showAnalysisModal} onOpenChange={setShowAnalysisModal}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                Analysis Report - {currentAnalysisRepo?.name}
-                {isAnalyzing && (
-                  <div className="flex items-center text-sm text-muted-foreground ml-auto">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-                    Analyzing...
-                  </div>
-                )}
-              </DialogTitle>
+              <DialogTitle>Analysis Report - {currentAnalysisRepo?.name}</DialogTitle>
             </DialogHeader>
             <div className="mt-4">
-              {analysisResult ? (
-                <div className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg">
-                  {formatAnalysis(analysisResult)}
-                </div>
-              ) : isAnalyzing ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">Analyzing your code...</p>
-                  <p className="text-sm text-muted-foreground mt-2">This may take a few moments</p>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">No analysis available</p>
-                </div>
-              )}
+              <div className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-lg prose prose-sm max-w-none">
+                {formatAnalysis(analysisResult)}
+              </div>
             </div>
           </DialogContent>
         </Dialog>
