@@ -1,6 +1,7 @@
 import { BaseEdge, EdgeProps } from "@xyflow/react";
 
-// A curved edge that bows away from the provided center point to keep the flow clockwise
+// ArcEdge: draws a clockwise circular-like dashed arc between nodes placed on a circle
+// It uses circle tangents at the endpoints to ensure consistent clockwise flow.
 export default function ArcEdge({
   sourceX,
   sourceY,
@@ -12,29 +13,48 @@ export default function ArcEdge({
 }: EdgeProps) {
   const cx = (data as any)?.centerX ?? (sourceX + targetX) / 2;
   const cy = (data as any)?.centerY ?? (sourceY + targetY) / 2;
-  const curvature = typeof (data as any)?.curvature === "number" ? (data as any).curvature : 0.6;
 
-  // Midpoint between source and target
-  const mx = (sourceX + targetX) / 2;
-  const my = (sourceY + targetY) / 2;
+  // Get vectors from center to endpoints
+  const rsx = sourceX - cx;
+  const rsy = sourceY - cy;
+  const rtx = targetX - cx;
+  const rty = targetY - cy;
 
-  // Vector from center to midpoint (points outward from the circle center)
-  let vx = mx - cx;
-  let vy = my - cy;
-  const vlen = Math.hypot(vx, vy) || 1;
-  vx /= vlen;
-  vy /= vlen;
+  const rsl = Math.hypot(rsx, rsy) || 1;
+  const rtl = Math.hypot(rtx, rty) || 1;
 
-  // Offset control points along this outward vector
-  const segLen = Math.hypot(targetX - sourceX, targetY - sourceY);
-  const offset = segLen * curvature;
+  // Normalize
+  const rsnx = rsx / rsl;
+  const rsny = rsy / rsl;
+  const rtnx = rtx / rtl;
+  const rtny = rty / rtl;
 
-  const c1x = sourceX + vx * offset;
-  const c1y = sourceY + vy * offset;
-  const c2x = targetX + vx * offset;
-  const c2y = targetY + vy * offset;
+  // For screen coordinates (y down), rotate CCW to move clockwise along the circle
+  // CCW rotation of (x, y) -> (-y, x)
+  const tsx = -rsny; // source tangent x
+  const tsy = rsnx;  // source tangent y
+  const ttx = -rtny; // target tangent x
+  const tty = rtnx;  // target tangent y
+
+  // Use a k factor suitable for ~60° circular arc; adjustable via data.k or data.curvature
+  const k = (typeof (data as any)?.k === 'number'
+    ? (data as any).k
+    : typeof (data as any)?.curvature === 'number'
+      ? (data as any).curvature
+      : 0.4);
+
+  const c1x = sourceX + tsx * k * rsl;
+  const c1y = sourceY + tsy * k * rsl;
+  const c2x = targetX - ttx * k * rtl; // approach target along its clockwise tangent
+  const c2y = targetY - tty * k * rtl;
 
   const path = `M ${sourceX} ${sourceY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${targetX} ${targetY}`;
 
-  return <BaseEdge path={path} markerEnd={markerEnd} style={style} />;
+  return (
+    <BaseEdge
+      path={path}
+      markerEnd={markerEnd}
+      style={{ strokeDasharray: '8 4', ...style }}
+    />
+  );
 }
