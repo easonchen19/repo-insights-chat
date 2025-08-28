@@ -80,6 +80,8 @@ const AnalysisReport = ({ projectId, projectName, onAnalysisComplete }: Analysis
       const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmeXdta2RxeXV1Y3hmdHB2bWZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NjkwNjEsImV4cCI6MjA3MTE0NTA2MX0.elHXCxBIqmz0IlcuOcKlY0gnIB88wK4rgbbpz9be244";
       const authToken = (await supabase.auth.getSession()).data.session?.access_token;
       
+      console.log('Starting analysis for project:', projectId);
+      
       const response = await fetch(`${SUPABASE_URL}/functions/v1/analyze-codebase`, {
         method: 'POST',
         headers: {
@@ -89,8 +91,13 @@ const AnalysisReport = ({ projectId, projectName, onAnalysisComplete }: Analysis
         body: JSON.stringify({ projectId, model: selectedModel })
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
       if (!response.ok) {
-        throw new Error('Failed to start analysis');
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
+        throw new Error(`Failed to start analysis: ${response.status} ${errorText}`);
       }
 
       const reader = response.body?.getReader();
