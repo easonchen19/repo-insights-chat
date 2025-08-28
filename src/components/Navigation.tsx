@@ -40,7 +40,7 @@ const Navigation = () => {
           .from('profiles')
           .select('github_access_token, github_username')
           .eq('id', user.id)
-          .maybeSingle();
+          .single();
 
         if (!cancelled) {
           setIsGitHubConnected(!error && !!profile?.github_access_token);
@@ -80,7 +80,7 @@ const Navigation = () => {
     
     try {
       // Sign in with GitHub OAuth through Supabase
-      const { error } = await supabase.auth.linkIdentity({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
           scopes: 'repo read:user',

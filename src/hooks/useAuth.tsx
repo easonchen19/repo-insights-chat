@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                   .from('profiles')
                   .select('github_username')
                   .eq('id', session.user.id)
-                  .maybeSingle();
+                  .single();
 
                 const githubUsername = profile?.github_username || session.user.user_metadata?.user_name || 'GitHub User';
                 

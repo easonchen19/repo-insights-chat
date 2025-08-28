@@ -68,27 +68,20 @@ const GitHubConnect = () => {
       console.log('🔄 Checking for GitHub callback...');
       
       const { data: { session } } = await supabase.auth.getSession();
-      const isLinkingGitHub = localStorage.getItem('linkingGitHub') === 'true';
-      const originalUserId = localStorage.getItem('originalUserId');
-      
       console.log('📋 Session data:', {
         hasSession: !!session,
         hasProviderToken: !!session?.provider_token,
+        // provider is not a property of Session; if needed, read it from user.app_metadata
         appProvider: session?.user?.app_metadata?.provider,
-        userMetadata: session?.user?.user_metadata,
-        isLinkingGitHub,
-        originalUserId,
-        currentUserId: session?.user?.id
+        userMetadata: session?.user?.user_metadata
       });
       
-      if (session?.provider_token) {
-        console.log('✅ Found provider token from OAuth callback; saving GitHub connection');
-        // Clear any previous linking state if present
-        localStorage.removeItem('linkingGitHub');
-        localStorage.removeItem('originalUserId');
+      if (session?.provider_token && session?.user?.app_metadata?.provider === 'github') {
+        console.log('✅ Found GitHub provider token, saving connection');
         await saveGitHubConnection(session.provider_token, session.user?.user_metadata || {});
       } else {
         console.log('ℹ️ No provider token found, checking existing connection');
+        // Just check existing connection
         await checkGitHubConnection();
       }
     };
@@ -106,7 +99,7 @@ const GitHubConnect = () => {
         .from('profiles')
         .select('github_access_token, github_username, github_connected_at')
         .eq('id', user.id)
-        .maybeSingle();
+        .single();
 
       console.log('👤 Profile check result:', {
         hasProfile: !!profile,
@@ -176,56 +169,14 @@ const GitHubConnect = () => {
       console.log('✅ GitHub connection saved, refreshing status');
       // Refresh connection status after saving
       await checkGitHubConnection();
+      
+      // Refresh connection status after saving
+      await checkGitHubConnection();
     } catch (error: any) {
       console.error('💥 Error saving GitHub connection:', error);
       toast({
         title: "Connection failed",
         description: error.message || "Failed to save GitHub connection",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const saveGitHubConnectionToUser = async (userId: string, accessToken: string, userData: any) => {
-    console.log('🔗 Saving GitHub connection to specific user...', {
-      targetUserId: userId,
-      hasToken: !!accessToken,
-      userData: userData
-    });
-    
-    try {
-      const normalized = {
-        login: userData?.user_name || userData?.login || userData?.preferred_username || 'github-user',
-        id: (userData?.user_id || userData?.id || userData?.sub || '').toString(),
-      };
-      
-      // Directly update the profile table with the GitHub data for the original user
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: userId,
-          github_access_token: accessToken,
-          github_username: normalized.login,
-          github_user_id: normalized.id,
-          github_connected_at: new Date().toISOString()
-        });
-
-      if (error) {
-        console.error('❌ Database error:', error);
-        throw error;
-      }
-
-      console.log('✅ GitHub connection saved to user profile');
-      
-      toast({
-        title: "GitHub Connected!",
-        description: `Successfully linked GitHub account (@${normalized.login}) to your email account.`,
-      });
-    } catch (error: any) {
-      console.error('💥 Error saving GitHub connection to user:', error);
-      toast({
-        title: "Connection failed",
-        description: error.message || "Failed to link GitHub account",
         variant: "destructive"
       });
     }
@@ -310,7 +261,7 @@ const GitHubConnect = () => {
         provider: session?.user?.app_metadata?.provider
       });
 
-      if (!isConnected && session?.provider_token) {
+      if (!isConnected && session?.provider_token && session?.user?.app_metadata?.provider === 'github') {
         console.log('🔐 Provider token found in session; saving connection...');
         await saveGitHubConnection(session.provider_token, session.user.user_metadata || {});
         await fetchRepositories();
@@ -346,11 +297,12 @@ const GitHubConnect = () => {
       return;
     }
 
-    console.log('🔗 Starting GitHub OAuth link for existing user...');
+    console.log('🔗 Starting GitHub OAuth connection...');
     setIsLoading(true);
     
     try {
-      const { error } = await supabase.auth.linkIdentity({
+      // Sign in with GitHub OAuth through Supabase
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
           scopes: 'repo read:user',
@@ -363,16 +315,16 @@ const GitHubConnect = () => {
       });
 
       if (error) {
-        console.error('❌ GitHub linkIdentity error:', error);
+        console.error('❌ OAuth error:', error);
         throw error;
       }
 
-      console.log('✅ GitHub link initiated successfully');
+      console.log('✅ OAuth initiated successfully');
     } catch (error: any) {
       console.error('💥 GitHub OAuth error:', error);
       toast({
         title: "Connection failed",
-        description: error.message || "Failed to connect GitHub account",
+        description: error.message || "Failed to connect to GitHub",
         variant: "destructive"
       });
       setIsLoading(false);
