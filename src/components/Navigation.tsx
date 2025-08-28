@@ -80,7 +80,7 @@ const Navigation = () => {
     
     try {
       // Sign in with GitHub OAuth through Supabase
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.linkIdentity({
         provider: 'github',
         options: {
           scopes: 'repo read:user',
