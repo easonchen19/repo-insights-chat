@@ -40,7 +40,7 @@ const Navigation = () => {
           .from('profiles')
           .select('github_access_token, github_username')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (!cancelled) {
           setIsGitHubConnected(!error && !!profile?.github_access_token);
@@ -80,6 +80,10 @@ const Navigation = () => {
     
     try {
       // Sign in with GitHub OAuth through Supabase
+      // Store current user state to restore after GitHub OAuth
+      localStorage.setItem('linkingGitHub', 'true');
+      localStorage.setItem('originalUserId', user.id);
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
