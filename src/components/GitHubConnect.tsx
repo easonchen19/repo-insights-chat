@@ -58,6 +58,110 @@ const GitHubConnect = () => {
     }
   };
 
+  // Generate contextual prompts based on repository analysis
+  const generateContextualPrompts = (repo: any) => {
+    const language = repo.language?.toLowerCase() || 'javascript';
+    const repoName = repo.name;
+    const isWebApp = language.includes('javascript') || language.includes('typescript') || language.includes('react');
+    const isMobile = language.includes('swift') || language.includes('kotlin') || language.includes('dart');
+    const isBackend = language.includes('python') || language.includes('java') || language.includes('go') || language.includes('rust');
+    
+    const basePrompts = [
+      {
+        title: `Add Authentication to ${repoName}`,
+        prompt: `Analyze the ${repoName} codebase and implement a secure authentication system using the existing tech stack. Include login/signup forms that match the current design system, proper session management, and protect routes appropriately for this ${language} application.`
+      },
+      {
+        title: `Database Integration`,
+        prompt: `Review the ${repoName} project structure and add database functionality using the most appropriate database for this ${language} stack. Create models, migrations, and API endpoints that follow the existing code patterns and architecture.`
+      },
+      {
+        title: `Add Testing Suite`,
+        prompt: `Set up comprehensive testing for the ${repoName} project using ${language}-appropriate testing frameworks. Include unit tests, integration tests, and end-to-end tests that cover the main functionality.`
+      }
+    ];
+
+    // Add language-specific prompts
+    if (isWebApp) {
+      basePrompts.push(
+        {
+          title: "Mobile Responsive Optimization",
+          prompt: `Make the ${repoName} application fully mobile responsive. Analyze the current components and layouts, then optimize for mobile devices while maintaining the existing design system and user experience.`
+        },
+        {
+          title: "Add Real-time Features",
+          prompt: `Integrate WebSocket or real-time functionality into ${repoName} using appropriate libraries for the ${language} stack. Consider the current architecture and add real-time updates where they would enhance user experience.`
+        }
+      );
+    }
+
+    if (isMobile) {
+      basePrompts.push(
+        {
+          title: "Push Notifications",
+          prompt: `Implement push notifications for the ${repoName} mobile app. Set up notification services, handle permissions, and create a notification management system that works with the current ${language} architecture.`
+        },
+        {
+          title: "Offline Mode Support",
+          prompt: `Add offline functionality to ${repoName}. Implement data caching, offline storage, and sync mechanisms that work seamlessly when the device reconnects to the internet.`
+        }
+      );
+    }
+
+    if (isBackend) {
+      basePrompts.push(
+        {
+          title: "API Rate Limiting",
+          prompt: `Add rate limiting and security middleware to the ${repoName} API. Implement request throttling, authentication middleware, and monitoring that integrates with the existing ${language} backend architecture.`
+        },
+        {
+          title: "Background Job Processing",
+          prompt: `Set up background job processing for ${repoName} using appropriate ${language} libraries. Add job queues, schedulers, and monitoring for long-running tasks.`
+        }
+      );
+    }
+
+    return basePrompts.slice(0, 6); // Return max 6 prompts
+  };
+
+  const getLanguageSpecificTips = (language: string) => {
+    const lang = language?.toLowerCase() || 'javascript';
+    
+    if (lang.includes('javascript') || lang.includes('typescript')) {
+      return [
+        "Reference existing React components and hooks in your prompts.",
+        "Mention TypeScript types and interfaces when applicable.",
+        "Include error boundaries and loading states in feature requests.",
+        "Specify responsive design requirements using the existing CSS framework."
+      ];
+    }
+    
+    if (lang.includes('python')) {
+      return [
+        "Mention Django/Flask patterns if using web frameworks.",
+        "Include proper error handling and logging in requests.",
+        "Specify database models and migrations needs.",
+        "Consider async/await patterns for performance."
+      ];
+    }
+    
+    if (lang.includes('swift')) {
+      return [
+        "Reference existing ViewControllers and Storyboards.",
+        "Include iOS design guidelines and accessibility.",
+        "Mention Core Data or SwiftUI patterns as appropriate.",
+        "Consider memory management and performance."
+      ];
+    }
+    
+    return [
+      "Be specific about the architecture and patterns you want to follow.",
+      "Include error handling, testing, and documentation requirements.",
+      "Mention performance and security considerations.",
+      "Reference existing code patterns and conventions in the repo."
+    ];
+  };
+
   const ghSamplePrompts: { title: string; prompt: string }[] = [
     {
       title: "Add Authentication System",
@@ -1143,15 +1247,15 @@ const GitHubConnect = () => {
                               <DialogHeader>
                                 <DialogTitle className="flex items-center gap-2">
                                   <Lightbulb className="w-5 h-5 text-primary" />
-                                  AI Prompt Strategy Guide
+                                  AI Prompt Strategy for {repo.name}
                                 </DialogTitle>
                               </DialogHeader>
                               <div className="space-y-4">
                                 <p className="text-sm text-muted-foreground">
-                                  Ready-to-use prompts for building common features. Click any prompt to copy it:
+                                  Contextual prompts tailored for your {repo.language} codebase. Click any prompt to copy it:
                                 </p>
                                 <div className="grid gap-3">
-                                  {ghSamplePrompts.map((s, i) => (
+                                  {generateContextualPrompts(repo).map((s, i) => (
                                     <div key={i} className="border border-border rounded-lg p-4">
                                       <div className="flex items-start justify-between mb-2">
                                         <h4 className="font-semibold text-foreground">{s.title}</h4>
@@ -1164,11 +1268,11 @@ const GitHubConnect = () => {
                                   ))}
                                 </div>
                                 <div className="border-t border-border pt-3">
-                                  <h4 className="font-semibold mb-2 text-foreground">Pro Tips</h4>
+                                  <h4 className="font-semibold mb-2 text-foreground">Pro Tips for {repo.language}</h4>
                                   <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                                    <li>State exactly what to build, where, and how it should look.</li>
-                                    <li>Mention error handling, accessibility, and responsiveness.</li>
-                                    <li>Reference existing components and design tokens.</li>
+                                    {getLanguageSpecificTips(repo.language).map((tip, i) => (
+                                      <li key={i}>{tip}</li>
+                                    ))}
                                   </ul>
                                 </div>
                               </div>
