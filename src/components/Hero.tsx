@@ -19,18 +19,18 @@ const Hero = () => {
       <div className="relative z-10 text-center max-w-4xl mx-auto px-6">
         <div className="mb-8 inline-flex items-center gap-2 bg-muted/50 backdrop-blur-sm rounded-full px-4 py-2 text-sm text-muted-foreground animate-glow">
           <Sparkles className="w-4 h-4 text-accent animate-pulse-vibe" />
-          AI-Powered Code Analysis & Prompting Platform
+          Lovable mate
         </div>
         
         <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-vibe bg-clip-text text-transparent animate-shimmer bg-[length:200%_auto]">
-          Feel the Vibe
+          Code like you are
           <br />
-          <span className="text-4xl md:text-6xl">of Your Code</span>
+          <span className="text-4xl md:text-6xl">a senior infra engineer</span>
         </h1>
         
         <p className="text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
-          Discover your code's true potential with AI-powered analysis, intelligent prompting, 
-          and deep insights that reveal the vibe of your project instantly.
+          Bridge the gap between code and prompt with AI-powered analysis, intelligent insights, 
+          and tools that elevate your development workflow to senior engineer level.
         </p>
         
         <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
