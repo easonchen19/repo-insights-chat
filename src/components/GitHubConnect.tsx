@@ -1084,7 +1084,7 @@ const GitHubConnect = () => {
                       key={repo.id} 
                       className="p-6 hover:shadow-elegant transition-all duration-300 bg-card/50 backdrop-blur-sm"
                     >
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between flex-wrap gap-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             <h3 className="text-xl font-semibold flex items-center">
@@ -1120,7 +1120,7 @@ const GitHubConnect = () => {
                           </div>
                         </div>
                         
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap justify-end">
                           <Button variant="outline">
                             <GitBranch className="w-4 h-4 mr-2" />
                             Branches
