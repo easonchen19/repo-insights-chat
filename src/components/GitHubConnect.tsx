@@ -81,12 +81,29 @@ const GitHubConnect = () => {
         currentUserId: session?.user?.id
       });
       
-      if (session?.provider_token) {
-        console.log('✅ Found provider token from OAuth callback; saving GitHub connection');
-        // Clear any previous linking state if present
-        localStorage.removeItem('linkingGitHub');
-        localStorage.removeItem('originalUserId');
-        await saveGitHubConnection(session.provider_token, session.user?.user_metadata || {});
+      if (session?.provider_token && session?.user?.app_metadata?.provider === 'github') {
+        console.log('✅ Found GitHub provider token');
+        
+        const isLinkingGitHub = localStorage.getItem('linkingGitHub') === 'true';
+        const originalUserId = localStorage.getItem('originalUserId');
+        
+        if (isLinkingGitHub && originalUserId) {
+          console.log('🔗 Handling GitHub linking to existing email account');
+          // Save GitHub data to the original user's profile
+          await saveGitHubConnectionToUser(originalUserId, session.provider_token, session.user?.user_metadata || {});
+          
+          // Clean up linking state
+          localStorage.removeItem('linkingGitHub');
+          localStorage.removeItem('originalUserId');
+          
+          // Sign out the GitHub user and navigate back to allow original user to continue
+          await supabase.auth.signOut();
+          window.location.href = '/github';
+          return;
+        } else {
+          // Normal GitHub login flow
+          await saveGitHubConnection(session.provider_token, session.user?.user_metadata || {});
+        }
       } else {
         console.log('ℹ️ No provider token found, checking existing connection');
         await checkGitHubConnection();
@@ -310,7 +327,7 @@ const GitHubConnect = () => {
         provider: session?.user?.app_metadata?.provider
       });
 
-      if (!isConnected && session?.provider_token) {
+      if (!isConnected && session?.provider_token && session?.user?.app_metadata?.provider === 'github') {
         console.log('🔐 Provider token found in session; saving connection...');
         await saveGitHubConnection(session.provider_token, session.user.user_metadata || {});
         await fetchRepositories();
@@ -346,11 +363,16 @@ const GitHubConnect = () => {
       return;
     }
 
-    console.log('🔗 Starting GitHub OAuth link for existing user...');
+    console.log('🔗 Starting GitHub OAuth connection for existing user...');
     setIsLoading(true);
     
     try {
-      const { error } = await supabase.auth.linkIdentity({
+      // Store current user state to restore after GitHub OAuth
+      localStorage.setItem('linkingGitHub', 'true');
+      localStorage.setItem('originalUserId', user.id);
+      
+      // Use signInWithOAuth but we'll handle the user merge in the callback
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
           scopes: 'repo read:user',
@@ -363,11 +385,13 @@ const GitHubConnect = () => {
       });
 
       if (error) {
-        console.error('❌ GitHub linkIdentity error:', error);
+        console.error('❌ GitHub OAuth error:', error);
+        localStorage.removeItem('linkingGitHub');
+        localStorage.removeItem('originalUserId');
         throw error;
       }
 
-      console.log('✅ GitHub link initiated successfully');
+      console.log('✅ GitHub OAuth initiated successfully');
     } catch (error: any) {
       console.error('💥 GitHub OAuth error:', error);
       toast({
