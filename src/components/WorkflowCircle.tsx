@@ -9,6 +9,7 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import ArcEdge from './edges/ArcEdge';
 
 const WorkflowCircle = () => {
   // Calculate positions for 6 points around a circle
@@ -134,7 +135,7 @@ const WorkflowCircle = () => {
   ];
 
   const initialEdges: Edge[] = [
-    // Clockwise circular connections between steps
+    // Clockwise circular connections between steps using custom arc edge
     ...steps.map((_, index) => {
       const currentStep = steps[index];
       const nextStep = steps[(index + 1) % steps.length];
@@ -143,12 +144,12 @@ const WorkflowCircle = () => {
         id: `edge-${index}`,
         source: currentStep.id,
         target: nextStep.id,
-        type: 'smoothstep',
+        type: 'arc',
         animated: true,
         style: { 
           stroke: 'hsl(var(--primary))', 
           strokeWidth: 3,
-          strokeDasharray: '8,4',
+          strokeDasharray: '8 4',
         },
         markerEnd: {
           type: MarkerType.ArrowClosed,
@@ -156,10 +157,12 @@ const WorkflowCircle = () => {
           width: 20,
           height: 20,
         },
-        pathOptions: {
-          offset: 20, // Curve the path outward for better clockwise flow
+        data: {
+          centerX,
+          centerY,
+          curvature: 0.65,
         },
-      };
+      } as Edge;
     }),
     // Subtle connections from center to each step
     ...steps.map((step) => ({
@@ -175,6 +178,8 @@ const WorkflowCircle = () => {
     }))
   ];
 
+  const edgeTypes = { arc: ArcEdge } as const;
+
   const [nodes] = useNodesState(initialNodes);
   const [edges] = useEdgesState(initialEdges);
 
@@ -183,6 +188,7 @@ const WorkflowCircle = () => {
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        edgeTypes={edgeTypes}
         fitView
         attributionPosition="bottom-left"
         nodesDraggable={false}
