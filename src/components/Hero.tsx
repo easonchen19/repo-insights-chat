@@ -28,10 +28,15 @@ const Hero = () => {
           <span className="text-4xl md:text-6xl">a senior infra engineer</span>
         </h1>
         
-        <p className="text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
+        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
           Bridge the gap between code and prompt with AI-powered analysis, intelligent insights, 
           and tools that elevate your development workflow to senior engineer level.
         </p>
+        
+        <div className="mb-12 inline-flex items-center gap-2 bg-gradient-primary/10 backdrop-blur-sm rounded-full px-6 py-3 text-lg font-medium text-foreground border border-primary/20">
+          <Brain className="w-5 h-5 text-primary" />
+          We are your AI coding partner - translating your codebase to real knowledge and prompts
+        </div>
         
         <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
           {user ? (
@@ -77,77 +82,140 @@ const Hero = () => {
         </div>
         
         {/* How It Works Section */}
-        <div className="mt-24 max-w-5xl mx-auto">
+        <div className="mt-24 max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-primary bg-clip-text text-transparent">
-              How It Works
+              Continuous Development Loop
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              From code to prompts in 6 simple steps
+              A seamless partnership with AI coding platforms for continuous evolution
             </p>
           </div>
           
-          <div className="grid gap-8 md:gap-12">
-            {[
-              {
-                step: "01",
-                title: "Code in Your Platform",
-                description: "You code in a vibe coding platform",
-                icon: <Code className="w-6 h-6" />
-              },
-              {
-                step: "02", 
-                title: "Connect GitHub",
-                description: "Connect your code in your GitHub repository",
-                icon: <Github className="w-6 h-6" />
-              },
-              {
-                step: "03",
-                title: "Sync & Analyze",
-                description: "Sync up your GitHub with us and we analyze your codebase",
-                icon: <Zap className="w-6 h-6" />
-              },
-              {
-                step: "04",
-                title: "Senior Engineer Translation", 
-                description: "We translate it to you like a senior infra engineer",
-                icon: <Brain className="w-6 h-6" />
-              },
-              {
-                step: "05",
-                title: "Generate Prompts",
-                description: "We generate proper prompts for additional features, or you describe your features to us",
-                icon: <Sparkles className="w-6 h-6" />
-              },
-              {
-                step: "06",
-                title: "Copy & Continue",
-                description: "Copy the 'ready to go' prompt back to your AI or vibe coding platform, continue building",
-                icon: <Code className="w-6 h-6" />
-              }
-            ].map((item, index) => (
-              <div key={index} className="flex gap-6 group">
-                <div className="flex-shrink-0">
-                  <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center text-white font-bold text-lg group-hover:scale-110 transition-transform duration-300">
-                    {item.step}
-                  </div>
+          {/* Circular Workflow */}
+          <div className="relative">
+            {/* Center connecting circle */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-32 h-32 rounded-full bg-gradient-primary/10 border-2 border-primary/20 flex items-center justify-center backdrop-blur-sm">
+                <div className="text-center">
+                  <Brain className="w-8 h-8 text-primary mx-auto mb-1" />
+                  <span className="text-sm font-medium text-primary">AI Partner</span>
                 </div>
-                <div className="flex-1 pt-2">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-muted/50 rounded-lg group-hover:bg-primary/10 transition-colors duration-300">
-                      {item.icon}
-                    </div>
-                    <h3 className="text-xl font-semibold">{item.title}</h3>
-                  </div>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {item.description}
-                  </p>
-                </div>
-                {index < 5 && (
-                  <div className="absolute left-8 mt-20 w-px h-12 bg-gradient-to-b from-primary/50 to-transparent" />
-                )}
               </div>
-            ))}
+            </div>
+            
+            {/* Workflow steps in circular layout */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+              {[
+                {
+                  step: "01",
+                  title: "Code in Your Platform",
+                  description: "You code in a vibe coding platform like Lovable, Claude, or ChatGPT",
+                  icon: <Code className="w-6 h-6" />,
+                  position: "top-left"
+                },
+                {
+                  step: "02", 
+                  title: "Connect GitHub",
+                  description: "Connect your code repository to sync your latest work",
+                  icon: <Github className="w-6 h-6" />,
+                  position: "top-center"
+                },
+                {
+                  step: "03",
+                  title: "Sync & Analyze",
+                  description: "We analyze your codebase with senior engineer insights",
+                  icon: <Zap className="w-6 h-6" />,
+                  position: "top-right"
+                },
+                {
+                  step: "04",
+                  title: "Senior Translation", 
+                  description: "Get professional-grade code analysis and recommendations",
+                  icon: <Brain className="w-6 h-6" />,
+                  position: "bottom-right"
+                },
+                {
+                  step: "05",
+                  title: "Generate Prompts",
+                  description: "AI-crafted prompts for features, improvements, or custom requests",
+                  icon: <Sparkles className="w-6 h-6" />,
+                  position: "bottom-center"
+                },
+                {
+                  step: "06",
+                  title: "Copy & Continue",
+                  description: "Take ready-to-use prompts back to your AI platform and keep building",
+                  icon: <Code className="w-6 h-6" />,
+                  position: "bottom-left"
+                }
+              ].map((item, index) => (
+                <Card key={index} className="relative p-6 bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/50 hover:shadow-glow transition-all duration-500 group">
+                  {/* Connecting lines to center */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                      <line 
+                        x1="50" y1="50" 
+                        x2={index < 3 ? "50" : "50"} 
+                        y2={index < 3 ? "100" : "0"}
+                        stroke="url(#gradient)" 
+                        strokeWidth="1" 
+                        className="opacity-30"
+                      />
+                      <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.5" />
+                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.1" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+                  
+                  <div className="relative z-10">
+                    <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                      <span className="text-white font-bold text-sm">{item.step}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-muted/50 rounded-lg group-hover:bg-primary/10 transition-colors duration-300">
+                        {item.icon}
+                      </div>
+                      <h3 className="text-lg font-semibold">{item.title}</h3>
+                    </div>
+                    
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      {item.description}
+                    </p>
+                  </div>
+                  
+                  {/* Curved arrow to next step */}
+                  {index < 5 && (
+                    <div className="absolute -right-4 top-1/2 transform -translate-y-1/2 hidden md:block">
+                      <div className="w-8 h-8 text-primary/40 animate-pulse">
+                        →
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Loop back arrow from last to first */}
+                  {index === 5 && (
+                    <div className="absolute -left-4 top-1/2 transform -translate-y-1/2 hidden md:block">
+                      <div className="w-8 h-8 text-accent/60 animate-pulse-vibe">
+                        ↺
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
+            
+            {/* Continuous loop indicator */}
+            <div className="text-center mt-12">
+              <div className="inline-flex items-center gap-2 bg-accent/10 backdrop-blur-sm rounded-full px-4 py-2 text-sm text-accent font-medium">
+                <div className="w-2 h-2 bg-accent rounded-full animate-pulse"></div>
+                Continuous Evolution - The loop never ends
+              </div>
+            </div>
           </div>
         </div>
       </div>
