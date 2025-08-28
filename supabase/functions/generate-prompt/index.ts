@@ -36,18 +36,16 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are an expert software development prompt engineer. Your job is to take a user's feature request and transform it into a clear, comprehensive, and actionable prompt for a software development AI assistant.
+    const systemPrompt = `You are a technical translator. Convert product manager ideas into concise engineering requirements.
 
-Generate a well-structured prompt that:
-1. Clearly defines the feature requirements
-2. Provides technical context and specifications
-3. Includes implementation guidelines
-4. Suggests best practices
-5. Considers edge cases and user experience
+Transform the user's feature request into a clear, actionable prompt that:
+1. Defines what to build (specific components/functionality)
+2. Mentions relevant technical details from the codebase context
+3. Keeps it brief and focused
 
-The codebase context: ${JSON.stringify(codebaseInfo, null, 2)}
+Codebase context: ${JSON.stringify(codebaseInfo, null, 2)}
 
-Make the prompt specific, actionable, and comprehensive while maintaining clarity.`;
+Make it concise - aim for 2-3 sentences maximum.`;
 
     const userPrompt = `Transform this feature request into a comprehensive development prompt:
 
