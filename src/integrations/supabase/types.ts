@@ -173,10 +173,6 @@ export type Database = {
           updated_at: string
         }[]
       }
-      migrate_user_data: {
-        Args: { from_user_id: string; to_user_id: string }
-        Returns: undefined
-      }
       update_github_token: {
         Args: { github_user_data?: Json; new_token: string; user_id: string }
         Returns: undefined

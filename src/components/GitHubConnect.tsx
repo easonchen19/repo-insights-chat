@@ -81,38 +81,12 @@ const GitHubConnect = () => {
         currentUserId: session?.user?.id
       });
       
-      if (session?.provider_token && session?.user?.app_metadata?.provider === 'github') {
-        console.log('✅ Found GitHub provider token');
-        
-        const isLinkingGitHub = localStorage.getItem('linkingGitHub') === 'true';
-        const originalUserId = localStorage.getItem('originalUserId');
-        
-        if (isLinkingGitHub && originalUserId) {
-          console.log('🔗 Handling GitHub linking with data migration');
-          
-          // Migrate all user data from original email user to this GitHub user
-          await migrateUserData(originalUserId, session.user.id);
-          
-          // Save GitHub connection data to the new GitHub user profile
-          await saveGitHubConnection(session.provider_token, session.user?.user_metadata || {});
-          
-          // Clean up linking state
-          localStorage.removeItem('linkingGitHub');
-          localStorage.removeItem('originalUserId');
-          localStorage.removeItem('originalUserEmail');
-          
-          toast({
-            title: "GitHub Connected & Data Migrated!",
-            description: "Your account is now fully connected with GitHub. All your projects and data have been transferred.",
-          });
-          
-          // Stay logged in as the GitHub user (don't sign out)
-          window.location.href = '/github';
-          return;
-        } else {
-          // Normal GitHub login flow
-          await saveGitHubConnection(session.provider_token, session.user?.user_metadata || {});
-        }
+      if (session?.provider_token) {
+        console.log('✅ Found provider token from OAuth callback; saving GitHub connection');
+        // Clear any previous linking state if present
+        localStorage.removeItem('linkingGitHub');
+        localStorage.removeItem('originalUserId');
+        await saveGitHubConnection(session.provider_token, session.user?.user_metadata || {});
       } else {
         console.log('ℹ️ No provider token found, checking existing connection');
         await checkGitHubConnection();
@@ -209,31 +183,6 @@ const GitHubConnect = () => {
         description: error.message || "Failed to save GitHub connection",
         variant: "destructive"
       });
-    }
-  };
-
-  const migrateUserData = async (fromUserId: string, toUserId: string) => {
-    console.log('🔄 Migrating user data...', {
-      fromUserId,
-      toUserId
-    });
-    
-    try {
-      // Call the migration function in Supabase
-      const { error } = await supabase.rpc('migrate_user_data', {
-        from_user_id: fromUserId,
-        to_user_id: toUserId
-      });
-
-      if (error) {
-        console.error('❌ Migration error:', error);
-        throw error;
-      }
-
-      console.log('✅ User data migration completed successfully');
-    } catch (error: any) {
-      console.error('💥 Error migrating user data:', error);
-      throw new Error(`Failed to migrate user data: ${error.message}`);
     }
   };
 
@@ -361,7 +310,7 @@ const GitHubConnect = () => {
         provider: session?.user?.app_metadata?.provider
       });
 
-      if (!isConnected && session?.provider_token && session?.user?.app_metadata?.provider === 'github') {
+      if (!isConnected && session?.provider_token) {
         console.log('🔐 Provider token found in session; saving connection...');
         await saveGitHubConnection(session.provider_token, session.user.user_metadata || {});
         await fetchRepositories();
@@ -397,28 +346,11 @@ const GitHubConnect = () => {
       return;
     }
 
-    // Check if the current email user already has a GitHub account associated
-    if (user.app_metadata?.provider === 'email') {
-      toast({
-        title: "No GitHub Account Found",
-        description: "There is no GitHub account associated with your login email. Please login with another email or login with GitHub directly!",
-        variant: "destructive"
-      });
-      setIsLoading(false);
-      return;
-    }
-
-    console.log('🔗 Starting GitHub OAuth connection for existing user...');
+    console.log('🔗 Starting GitHub OAuth link for existing user...');
     setIsLoading(true);
     
     try {
-      // Store current user state for migration after GitHub OAuth
-      localStorage.setItem('linkingGitHub', 'true');
-      localStorage.setItem('originalUserId', user.id);
-      localStorage.setItem('originalUserEmail', user.email || '');
-      
-      // Use signInWithOAuth but we'll handle the user merge in the callback
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.linkIdentity({
         provider: 'github',
         options: {
           scopes: 'repo read:user',
@@ -431,13 +363,11 @@ const GitHubConnect = () => {
       });
 
       if (error) {
-        console.error('❌ GitHub OAuth error:', error);
-        localStorage.removeItem('linkingGitHub');
-        localStorage.removeItem('originalUserId');
+        console.error('❌ GitHub linkIdentity error:', error);
         throw error;
       }
 
-      console.log('✅ GitHub OAuth initiated successfully');
+      console.log('✅ GitHub link initiated successfully');
     } catch (error: any) {
       console.error('💥 GitHub OAuth error:', error);
       toast({

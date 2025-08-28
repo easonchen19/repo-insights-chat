@@ -80,11 +80,7 @@ const Navigation = () => {
     
     try {
       // Sign in with GitHub OAuth through Supabase
-      // Store current user state to restore after GitHub OAuth
-      localStorage.setItem('linkingGitHub', 'true');
-      localStorage.setItem('originalUserId', user.id);
-      
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.linkIdentity({
         provider: 'github',
         options: {
           scopes: 'repo read:user',
