@@ -99,7 +99,7 @@ const GitHubConnect = () => {
         .from('profiles')
         .select('github_access_token, github_username, github_connected_at')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       console.log('👤 Profile check result:', {
         hasProfile: !!profile,
