@@ -87,13 +87,25 @@ const WorkflowCircle = () => {
       
       <div className="flex justify-center items-center h-full relative z-10">
         <div className="grid grid-cols-3 grid-rows-2 gap-32 max-w-8xl w-full relative px-20 py-16">
+          {/* Render steps with custom positioning - reverse bottom row */}
           {steps.map((step, index) => {
             const Icon = step.icon;
             const isActive = index === activeStep;
             const isNextActive = (activeStep + 1) % steps.length === index;
             
+            // Rearrange positions: top row 1,2,3 - bottom row 6,5,4 (reversed)
+            let gridPosition = '';
+            if (index <= 2) {
+              // Top row: normal order
+              gridPosition = `col-start-${index + 1} row-start-1`;
+            } else {
+              // Bottom row: reverse order (4,5,6 becomes 6,5,4)
+              const reversedIndex = 6 - index; // 4->3, 5->2, 6->1
+              gridPosition = `col-start-${reversedIndex} row-start-2`;
+            }
+            
             return (
-              <div key={step.id} className="relative flex flex-col items-center group">
+              <div key={step.id} className={`relative flex flex-col items-center group ${gridPosition}`}>
                 {/* Holographic Step Card */}
                 <div className={`
                   relative p-8 rounded-3xl transition-all duration-700 transform w-full max-w-sm
@@ -185,17 +197,17 @@ const WorkflowCircle = () => {
                       </div>
                     )}
                     
-                    {/* Vertical arrow down */}
+                    {/* Vertical arrow down (step 3 to step 4, but step 4 is now on the right) */}
                     {index === 2 && (
-                      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-16 z-20">
+                      <div className="absolute bottom-0 right-0 transform translate-x-16 translate-y-16 z-20">
                         <div className="flex flex-col items-center space-y-3">
                           <div className={`w-0.5 h-24 bg-gradient-to-b from-amber-500 to-red-500 rounded-full ${isActive ? 'animate-pulse shadow-lg shadow-amber-500/50' : ''}`}></div>
-                          <ArrowRight className={`w-12 h-12 text-red-400 drop-shadow-2xl transition-all duration-500 rotate-90 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
+                          <ArrowRight className={`w-12 h-12 text-red-400 drop-shadow-2xl transition-all duration-500 rotate-45 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
                         </div>
                       </div>
                     )}
                     
-                    {/* Horizontal arrows for bottom row (reverse) */}
+                    {/* Bottom row arrows - now reversed (step 4 to step 5) */}
                     {index === 3 && (
                       <div className="absolute -left-16 top-1/2 transform -translate-y-1/2 z-20">
                         <div className="flex items-center space-x-3">
@@ -205,6 +217,7 @@ const WorkflowCircle = () => {
                       </div>
                     )}
                     
+                    {/* Step 5 to step 6 */}
                     {index === 4 && (
                       <div className="absolute -left-16 top-1/2 transform -translate-y-1/2 z-20">
                         <div className="flex items-center space-x-3">
@@ -214,11 +227,11 @@ const WorkflowCircle = () => {
                       </div>
                     )}
                     
-                    {/* Vertical arrow up */}
+                    {/* Diagonal arrow from step 6 back to step 1 */}
                     {index === 5 && (
-                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-16 z-20">
+                      <div className="absolute top-0 left-0 transform -translate-x-16 -translate-y-16 z-20">
                         <div className="flex flex-col items-center space-y-3">
-                          <ArrowRight className={`w-12 h-12 text-purple-400 drop-shadow-2xl transition-all duration-500 -rotate-90 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
+                          <ArrowRight className={`w-12 h-12 text-purple-400 drop-shadow-2xl transition-all duration-500 -rotate-45 ${isActive ? 'animate-pulse scale-125' : 'animate-pulse'}`} />
                           <div className={`w-0.5 h-24 bg-gradient-to-t from-cyan-500 to-purple-500 rounded-full ${isActive ? 'animate-pulse shadow-lg shadow-cyan-500/50' : ''}`}></div>
                         </div>
                       </div>
