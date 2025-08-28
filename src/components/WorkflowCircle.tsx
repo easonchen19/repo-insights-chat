@@ -12,9 +12,9 @@ import '@xyflow/react/dist/style.css';
 
 const WorkflowCircle = () => {
   // Calculate positions for 6 points around a circle
-  const centerX = 400;
-  const centerY = 300;
-  const radius = 180;
+  const centerX = 450;
+  const centerY = 350;
+  const radius = 220;
   
   const steps = [
     {
@@ -89,9 +89,10 @@ const WorkflowCircle = () => {
     // Step nodes around the circle
     ...steps.map((step, index) => {
       const angle = (index * 60 - 90) * (Math.PI / 180); // Start from top, 60 degrees apart
-      const x = centerX + radius * Math.cos(angle) - 80;
-      const y = centerY + radius * Math.sin(angle) - 40;
+      const x = centerX + radius * Math.cos(angle) - 100;
+      const y = centerY + radius * Math.sin(angle) - 60;
       const Icon = step.icon;
+      const stepNumber = index + 1;
       
       return {
         id: step.id,
@@ -99,21 +100,32 @@ const WorkflowCircle = () => {
         position: { x, y },
         data: { 
           label: (
-            <div className="text-center p-2">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: step.color }}>
-                <Icon className="w-5 h-5 text-white" />
+            <div className="relative p-4">
+              {/* Step Number Badge */}
+              <div className="absolute -top-2 -left-2 w-8 h-8 rounded-full bg-gradient-to-br from-white to-gray-100 border-2 flex items-center justify-center shadow-lg z-10" style={{ borderColor: step.color }}>
+                <span className="text-sm font-bold" style={{ color: step.color }}>
+                  {stepNumber}
+                </span>
               </div>
-              <div className="font-semibold text-xs mb-1">{step.title}</div>
-              <div className="text-xs text-muted-foreground leading-tight">{step.description}</div>
+              
+              {/* Content */}
+              <div className="text-center pt-2">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-md" style={{ backgroundColor: step.color }}>
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
+                <div className="font-bold text-sm mb-2 text-foreground">{step.title}</div>
+                <div className="text-xs text-muted-foreground leading-relaxed px-1">{step.description}</div>
+              </div>
             </div>
           )
         },
         style: {
           backgroundColor: 'hsl(var(--card))',
-          border: `2px solid ${step.color}`,
-          borderRadius: '12px',
-          width: 160,
-          height: 120,
+          border: `2px solid ${step.color}20`,
+          borderRadius: '16px',
+          width: 200,
+          height: 140,
+          boxShadow: `0 4px 12px ${step.color}15`,
         },
         draggable: false,
         selectable: false,
@@ -156,7 +168,7 @@ const WorkflowCircle = () => {
   const [edges] = useEdgesState(initialEdges);
 
   return (
-    <div className="w-full h-[700px] bg-gradient-to-br from-background to-muted/20 rounded-lg border">
+    <div className="w-full h-[800px] bg-gradient-to-br from-background to-muted/20 rounded-lg border">
       <ReactFlow
         nodes={nodes}
         edges={edges}
