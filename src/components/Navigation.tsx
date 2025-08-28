@@ -40,7 +40,7 @@ const Navigation = () => {
           .from('profiles')
           .select('github_access_token, github_username')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (!cancelled) {
           setIsGitHubConnected(!error && !!profile?.github_access_token);
