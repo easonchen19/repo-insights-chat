@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Brain, Clock, FileText, Users, TrendingUp, AlertTriangle, CheckCircle, XCircle, Info } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Brain, Clock, FileText, Users, TrendingUp, AlertTriangle, CheckCircle, XCircle, Info, BookOpen, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useModelSelection } from "./ModelSelector";
@@ -18,6 +19,57 @@ const AnalysisReport = ({ projectId, projectName, onAnalysisComplete }: Analysis
   const [analysis, setAnalysis] = useState<string | null>(null);
   const { selectedModel } = useModelSelection();
   const { toast } = useToast();
+
+  const samplePrompts = [
+    {
+      title: "Adding User Authentication",
+      prompt: "Add user authentication with email/password signup and login. Include a profiles table to store user data like username and avatar. Create a dedicated /auth page with both signup and login forms, and protect routes that require authentication.",
+      category: "Authentication"
+    },
+    {
+      title: "User Onboarding Flow",
+      prompt: "Create a 3-step onboarding flow for new users: 1) Welcome screen with app overview, 2) Profile setup form (name, bio, preferences), 3) Tutorial walkthrough of main features. Include progress indicators and skip options.",
+      category: "Onboarding"
+    },
+    {
+      title: "Payment Integration",
+      prompt: "Add Stripe payment integration for subscription billing. Create a pricing page with 3 tiers (Basic $9/month, Pro $29/month, Enterprise $99/month). Include payment forms, subscription management, and billing history page.",
+      category: "Payments"
+    },
+    {
+      title: "Dashboard with Analytics",
+      prompt: "Build a user dashboard with analytics charts showing user activity, growth metrics, and key performance indicators. Include filter options for date ranges and export functionality for reports.",
+      category: "Dashboard"
+    },
+    {
+      title: "File Upload System",
+      prompt: "Create a file upload component that supports drag & drop, multiple file selection, and progress indicators. Store files in Supabase storage with proper access controls. Include file preview and delete functionality.",
+      category: "File Management"
+    },
+    {
+      title: "Real-time Chat Feature",
+      prompt: "Add a real-time chat system where users can send messages in channels. Include message history, typing indicators, online status, and message reactions using Supabase realtime subscriptions.",
+      category: "Real-time Features"
+    },
+    {
+      title: "Search & Filtering",
+      prompt: "Implement a powerful search system with filters for the main content. Include text search, category filters, date range selection, and sorting options. Add search suggestions and recent searches.",
+      category: "Search"
+    },
+    {
+      title: "Email Notifications",
+      prompt: "Set up email notification system using Supabase Edge Functions and Resend. Include welcome emails, password reset, activity notifications, and user preference management for email types.",
+      category: "Notifications"
+    }
+  ];
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied to clipboard!",
+      description: "You can now paste this prompt in your chat.",
+    });
+  };
 
   const runAnalysis = async () => {
     setIsAnalyzing(true);
@@ -470,6 +522,67 @@ const AnalysisReport = ({ projectId, projectName, onAnalysisComplete }: Analysis
           </Card>
         </div>
       )}
+
+      {/* Sample Prompts Button */}
+      <div className="flex justify-center">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2 border-2 border-primary/20 hover:border-primary/40 transition-colors">
+              <BookOpen className="w-4 h-4" />
+              Sample Prompts
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-primary" />
+                Sample Prompts for Building Features
+              </DialogTitle>
+              <DialogDescription>
+                Copy these example prompts to build common features effectively. Each prompt is designed to be specific and avoid AI hallucinations.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-6 mt-6">
+              {samplePrompts.map((prompt, index) => (
+                <div key={index} className="border border-border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-foreground">{prompt.title}</h3>
+                      <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                        {prompt.category}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(prompt.prompt)}
+                      className="flex items-center gap-2 text-primary hover:text-primary/80"
+                    >
+                      <Copy className="w-4 h-4" />
+                      Copy
+                    </Button>
+                  </div>
+                  <div className="bg-muted/30 rounded p-3 text-sm text-muted-foreground leading-relaxed">
+                    "{prompt.prompt}"
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 p-4 bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20 rounded-lg">
+              <h4 className="font-semibold text-foreground mb-2">💡 Pro Tips for Better Prompts:</h4>
+              <ul className="space-y-1 text-sm text-muted-foreground">
+                <li>• Be specific about what you want instead of using vague terms</li>
+                <li>• Break large features into smaller, manageable requests</li>
+                <li>• Describe the user experience you want to achieve</li>
+                <li>• Include specific field names and data relationships</li>
+                <li>• Always request error handling and validation</li>
+              </ul>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 };
