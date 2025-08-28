@@ -75,6 +75,81 @@ const Hero = () => {
             </p>
           </Card>
         </div>
+        
+        {/* How It Works Section */}
+        <div className="mt-24 max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-primary bg-clip-text text-transparent">
+              How It Works
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              From code to prompts in 6 simple steps
+            </p>
+          </div>
+          
+          <div className="grid gap-8 md:gap-12">
+            {[
+              {
+                step: "01",
+                title: "Code in Your Platform",
+                description: "You code in a vibe coding platform",
+                icon: <Code className="w-6 h-6" />
+              },
+              {
+                step: "02", 
+                title: "Connect GitHub",
+                description: "Connect your code in your GitHub repository",
+                icon: <Github className="w-6 h-6" />
+              },
+              {
+                step: "03",
+                title: "Sync & Analyze",
+                description: "Sync up your GitHub with us and we analyze your codebase",
+                icon: <Zap className="w-6 h-6" />
+              },
+              {
+                step: "04",
+                title: "Senior Engineer Translation", 
+                description: "We translate it to you like a senior infra engineer",
+                icon: <Brain className="w-6 h-6" />
+              },
+              {
+                step: "05",
+                title: "Generate Prompts",
+                description: "We generate proper prompts for additional features, or you describe your features to us",
+                icon: <Sparkles className="w-6 h-6" />
+              },
+              {
+                step: "06",
+                title: "Copy & Continue",
+                description: "Copy the 'ready to go' prompt back to your AI or vibe coding platform, continue building",
+                icon: <Code className="w-6 h-6" />
+              }
+            ].map((item, index) => (
+              <div key={index} className="flex gap-6 group">
+                <div className="flex-shrink-0">
+                  <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center text-white font-bold text-lg group-hover:scale-110 transition-transform duration-300">
+                    {item.step}
+                  </div>
+                </div>
+                <div className="flex-1 pt-2">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-muted/50 rounded-lg group-hover:bg-primary/10 transition-colors duration-300">
+                      {item.icon}
+                    </div>
+                    <h3 className="text-xl font-semibold">{item.title}</h3>
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
+                {index < 5 && (
+                  <div className="absolute left-8 mt-20 w-px h-12 bg-gradient-to-b from-primary/50 to-transparent" />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

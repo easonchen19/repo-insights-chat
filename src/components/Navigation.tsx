@@ -160,7 +160,7 @@ const Navigation = () => {
               <Code className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold bg-gradient-vibe bg-clip-text text-transparent animate-shimmer bg-[length:200%_auto]">
-              VibePrompting
+              Lovable Mate
             </span>
           </NavLink>
 
