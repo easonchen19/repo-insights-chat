@@ -134,32 +134,43 @@ const WorkflowCircle = () => {
   ];
 
   const initialEdges: Edge[] = [
-    // Circular connections between steps
-    ...steps.map((_, index) => ({
-      id: `edge-${index}`,
-      source: steps[index].id,
-      target: steps[(index + 1) % steps.length].id,
-      type: 'smoothstep',
-      animated: true,
-      style: { 
-        stroke: 'hsl(var(--primary))', 
-        strokeWidth: 2,
-      },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: 'hsl(var(--primary))',
-      },
-    })),
-    // Connections from center to each step
+    // Clockwise circular connections between steps
+    ...steps.map((_, index) => {
+      const currentStep = steps[index];
+      const nextStep = steps[(index + 1) % steps.length];
+      
+      return {
+        id: `edge-${index}`,
+        source: currentStep.id,
+        target: nextStep.id,
+        type: 'smoothstep',
+        animated: true,
+        style: { 
+          stroke: 'hsl(var(--primary))', 
+          strokeWidth: 3,
+          strokeDasharray: '8,4',
+        },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: 'hsl(var(--primary))',
+          width: 20,
+          height: 20,
+        },
+        pathOptions: {
+          offset: 20, // Curve the path outward for better clockwise flow
+        },
+      };
+    }),
+    // Subtle connections from center to each step
     ...steps.map((step) => ({
       id: `center-${step.id}`,
       source: 'center',
       target: step.id,
       type: 'straight',
       style: { 
-        stroke: 'hsl(var(--primary) / 0.3)', 
+        stroke: 'hsl(var(--primary) / 0.2)', 
         strokeWidth: 1,
-        strokeDasharray: '5,5',
+        strokeDasharray: '3,3',
       },
     }))
   ];
