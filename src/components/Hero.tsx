@@ -130,26 +130,6 @@ const Hero = () => {
         </div>
       </div>
       
-      {/* Continuous Development Loop Section */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 mt-20">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-vibe bg-clip-text text-transparent">
-            Continuous Development Loop
-          </h2>
-          <p className="text-xl text-foreground/70 max-w-3xl mx-auto leading-relaxed">
-            Experience the future of development with our intelligent workflow that never stops improving.
-            Each cycle brings deeper insights and better results.
-          </p>
-          
-          {/* Pulsing Evolution Indicator */}
-          <div className="inline-flex items-center gap-2 mt-6 px-4 py-2 bg-gradient-glow/20 backdrop-blur-sm rounded-full border border-primary/30">
-            <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
-            <span className="text-sm font-medium text-primary">Continuous Evolution</span>
-          </div>
-        </div>
-        
-        <WorkflowCircle />
-      </div>
     </div>
   );
 };
