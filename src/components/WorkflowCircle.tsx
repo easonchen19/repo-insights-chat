@@ -178,28 +178,28 @@ const WorkflowCircle = () => {
             );
           })}
           
-          {/* Central Holographic Core - Made 3 times smaller */}
+          {/* Central Holographic Core */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
             <div className="relative">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 border border-dashed border-primary/30 flex items-center justify-center backdrop-blur-sm animate-spin-slow">
-                <div className="w-8 h-8 rounded-full bg-card/80 border border-primary/50 flex items-center justify-center backdrop-blur-lg">
+              <div className="w-40 h-40 rounded-full bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 border-2 border-dashed border-primary/30 flex items-center justify-center backdrop-blur-sm animate-spin-slow">
+                <div className="w-24 h-24 rounded-full bg-card/80 border border-primary/50 flex items-center justify-center backdrop-blur-lg">
                   <div className="text-center">
-                    <Brain className="w-2.5 h-2.5 text-primary mx-auto mb-0.5 animate-pulse" />
-                    <div className="text-[6px] font-bold text-primary leading-none">INFINITE</div>
-                    <div className="text-[6px] font-bold text-accent leading-none">LOOP</div>
+                    <Brain className="w-8 h-8 text-primary mx-auto mb-1 animate-pulse" />
+                    <div className="text-xs font-bold text-primary">INFINITE</div>
+                    <div className="text-xs font-bold text-accent">LOOP</div>
                   </div>
                 </div>
               </div>
               
-              {/* Orbiting Particles - Made 3 times smaller */}
+              {/* Orbiting Particles */}
               {Array.from({ length: 8 }).map((_, i) => (
                 <div
                   key={i}
-                  className="absolute w-1 h-1 bg-primary rounded-full animate-ping"
+                  className="absolute w-2 h-2 bg-primary rounded-full animate-ping"
                   style={{
                     left: '50%',
                     top: '50%',
-                    transform: `translate(-50%, -50%) rotate(${i * 45}deg) translateY(-27px)`,
+                    transform: `translate(-50%, -50%) rotate(${i * 45}deg) translateY(-80px)`,
                     animationDelay: `${i * 250}ms`,
                     animationDuration: '2s'
                   }}
