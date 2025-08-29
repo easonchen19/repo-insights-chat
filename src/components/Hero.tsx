@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import UploadButton from "@/components/UploadButton";
 import WorkflowCircle from "@/components/WorkflowCircle";
 import { useEffect, useState } from "react";
+import lovableMateLogoUrl from "@/assets/lovable-mate-logo.png";
 
 const Hero = () => {
   const { user } = useAuth();
@@ -42,7 +43,7 @@ const Hero = () => {
             ? 'bg-primary/20 border-primary/50 shadow-neon' 
             : 'bg-muted/30 border-muted/50'
         }`}>
-          <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+          <img src={lovableMateLogoUrl} alt="Lovable Mate Logo" className="w-6 h-6" />
           <span className="font-medium bg-gradient-vibe bg-clip-text text-transparent">Lovable mate</span>
         </div>
         
