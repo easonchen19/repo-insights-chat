@@ -140,6 +140,21 @@ const Hero = () => {
         </div>
         
         <WorkflowCircle />
+        
+        {/* Connect Git CTA */}
+        <div className="text-center mt-16">
+          <Button 
+            variant="default" 
+            size="lg" 
+            asChild 
+            className="bg-gradient-primary hover:shadow-neon transition-all duration-500 text-lg px-8 py-4 h-auto"
+          >
+            <NavLink to="/github">
+              <Github className="w-5 h-5 mr-2" />
+              Connect Git
+            </NavLink>
+          </Button>
+        </div>
       </div>
     </div>
   );
