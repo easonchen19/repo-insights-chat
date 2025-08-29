@@ -75,9 +75,7 @@ const WorkflowCircle = () => {
       <div className="text-center mb-12 relative z-10">
         <div className="inline-flex items-center gap-3 px-6 py-3 bg-card/60 backdrop-blur-lg rounded-full mb-6 border border-primary/30 shadow-glow">
           <Brain className="w-6 h-6 text-primary animate-pulse" />
-          <span className="text-lg font-bold bg-gradient-vibe bg-clip-text text-transparent">
-            AI Partner - Continuous Evolution
-          </span>
+            How it works with your lovable project?
         </div>
         <p className="text-foreground/70 text-lg max-w-3xl mx-auto leading-relaxed">
           An infinite loop of intelligent development where each step flows seamlessly into the next, 
