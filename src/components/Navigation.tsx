@@ -4,7 +4,7 @@ import { Code, Github, Menu, X, FolderOpen, Brain, LogOut, User, Link, Unlink, E
 import { Button } from "@/components/ui/button";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import lovableMateLogoNew from "@/assets/lovable-mate-logo-new.png";
+import lovableMateLogoNew from "@/assets/lovable-mate-heart-logo.png";
 
 import {
   DropdownMenu,
