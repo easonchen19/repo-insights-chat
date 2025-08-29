@@ -137,9 +137,6 @@ const Hero = () => {
           <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-vibe bg-clip-text text-transparent">
             How does Lovable Mate work?
           </h2>
-          <p className="text-xl text-foreground/70 max-w-3xl mx-auto leading-relaxed">
-            Simple workflow that transforms your code into actionable insights.
-          </p>
         </div>
         
         <WorkflowCircle />
