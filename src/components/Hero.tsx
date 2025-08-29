@@ -143,6 +143,19 @@ const Hero = () => {
         
         {/* Connect Git CTA */}
         <div className="text-center mt-16">
+          <div className="mb-6">
+            <h3 className="text-2xl md:text-3xl font-bold mb-4 bg-gradient-vibe bg-clip-text text-transparent">
+              Ready to supercharge your development?
+            </h3>
+            <p className="text-lg text-foreground/70 max-w-2xl mx-auto mb-2">
+              Connect your GitHub and unlock <span className="text-primary font-semibold">bidirectional sync</span>, 
+              automatic deployments, and seamless collaboration.
+            </p>
+            <p className="text-sm text-accent font-medium">
+              ⚡ Real-time sync • 🚀 Instant deployment • 🔄 Zero configuration
+            </p>
+          </div>
+          
           <Button 
             variant="default" 
             size="lg" 
