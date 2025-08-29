@@ -92,8 +92,8 @@ Use concise sections and bullet points where helpful.`;
 
     console.log('📦 analyze-github-code: files received:', files.length, 'valid:', sanitized.length, 'limited:', limited.length, 'budgetLeft:', remaining);
 
-    // Try multiple models for reliability
-    const models = ['claude-sonnet-4-20250514', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'];
+    // Try multiple models for reliability, starting with the cheapest
+    const models = ['claude-3-5-haiku-20241022', 'claude-3-5-sonnet-20241022', 'claude-sonnet-4-20250514'];
     let response: Response | null = null;
     let lastErrorText = '';
 
