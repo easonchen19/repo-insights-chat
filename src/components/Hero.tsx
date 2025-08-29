@@ -35,13 +35,6 @@ const Hero = () => {
       <div className="absolute bottom-20 right-20 w-32 h-32 bg-accent/15 rounded-full blur-xl animate-pulse" style={{ animationDelay: '3s' }}></div>
       <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-gradient-glow opacity-30 rounded-full blur-xl animate-pulse" style={{ animationDelay: '6s' }}></div>
       
-      {/* Scanning Lines Effect */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute w-full h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent animate-[scan_4s_ease-in-out_infinite]" 
-             style={{ top: '20%', animationDelay: '0s' }}></div>
-        <div className="absolute w-full h-0.5 bg-gradient-to-r from-transparent via-accent to-transparent animate-[scan_4s_ease-in-out_infinite]" 
-             style={{ top: '60%', animationDelay: '2s' }}></div>
-      </div>
       
       <div className="relative z-10 text-center max-w-4xl mx-auto px-6">
         <div className={`mb-8 inline-flex items-center gap-3 backdrop-blur-xl rounded-full px-6 py-3 text-sm border transition-all duration-1000 ${
