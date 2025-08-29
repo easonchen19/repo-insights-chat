@@ -18,7 +18,7 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="auto" storageKey="vibe-ui-theme">
+    <ThemeProvider>
       <AuthProvider>
         <TooltipProvider>
           <Toaster />

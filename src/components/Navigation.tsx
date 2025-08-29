@@ -4,7 +4,7 @@ import { Code, Github, Menu, X, FolderOpen, Brain, LogOut, User, Link, Unlink, E
 import { Button } from "@/components/ui/button";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { ThemeToggle } from "@/components/ThemeToggle";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -181,7 +181,6 @@ const Navigation = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <ThemeToggle />
             {user ? (
               <>
                 <UploadButton variant="outline" size="sm" />
@@ -262,9 +261,6 @@ const Navigation = () => {
                 <Github className="w-4 h-4" />
                 GitHub
               </NavLink>
-              <div className="flex justify-center">
-                <ThemeToggle />
-              </div>
               {user ? (
                 <>
                   <UploadButton variant="outline" size="sm" />
