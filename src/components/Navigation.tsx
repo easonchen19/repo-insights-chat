@@ -4,6 +4,7 @@ import { Code, Github, Menu, X, FolderOpen, Brain, LogOut, User, Link, Unlink, E
 import { Button } from "@/components/ui/button";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import lovableMateLogoNew from "@/assets/lovable-mate-logo-new.png";
 
 import {
   DropdownMenu,
@@ -155,10 +156,12 @@ const Navigation = () => {
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <NavLink to="/" className="flex items-center space-x-2 group">
-            <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Code className="w-5 h-5 text-white" />
-            </div>
+          <NavLink to="/" className="flex items-center space-x-3 group">
+            <img 
+              src={lovableMateLogoNew} 
+              alt="Lovable Mate Logo" 
+              className="w-8 h-8 group-hover:scale-110 transition-transform"
+            />
             <span className="text-xl font-bold bg-gradient-vibe bg-clip-text text-transparent animate-shimmer bg-[length:200%_auto]">
               Lovable Mate
             </span>

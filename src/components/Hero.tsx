@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import UploadButton from "@/components/UploadButton";
 import WorkflowCircle from "@/components/WorkflowCircle";
 import { useEffect, useState } from "react";
-import lovableMateLogoUrl from "@/assets/lovable-mate-logo.png";
+import lovableMateLogoUrl from "@/assets/lovable-mate-logo-new.png";
 
 const Hero = () => {
   const { user } = useAuth();
