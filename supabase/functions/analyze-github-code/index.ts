@@ -14,9 +14,9 @@ interface FileData {
 
 type SafeFile = Required<Pick<FileData, 'path' | 'content'>> & { type?: string };
 
-const MAX_FILES = 40;
-const MAX_CHARS_PER_FILE = 4000;
-const TOTAL_CHAR_BUDGET = 120_000;
+const MAX_FILES = 30;
+const MAX_CHARS_PER_FILE = 2000;
+const TOTAL_CHAR_BUDGET = 60_000;
 
 // Codebase analysis interfaces
 interface DependencyInfo {
@@ -338,6 +338,69 @@ ${knowledge.complexity.highComplexityFiles.length > 0 ? `- **High Complexity Fil
 `;
 }
 
+// Extract core code sections for analysis
+function extractCoreCode(content: string): string {
+  const lines = content.split('\n');
+  const coreLines: string[] = [];
+  let inFunction = false;
+  let braceCount = 0;
+  let commentBlocks = 0;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    
+    // Skip empty lines and excessive comments
+    if (!trimmed || trimmed.startsWith('//')) continue;
+    
+    // Handle comment blocks
+    if (trimmed.startsWith('/*')) commentBlocks++;
+    if (trimmed.includes('*/')) commentBlocks--;
+    if (commentBlocks > 0) continue;
+    
+    // Always include imports/exports
+    if (trimmed.startsWith('import ') || trimmed.startsWith('export ')) {
+      coreLines.push(line);
+      continue;
+    }
+    
+    // Include function/component definitions and key logic
+    if (trimmed.includes('function ') || 
+        trimmed.includes('const ') && trimmed.includes('=>') ||
+        trimmed.includes('interface ') ||
+        trimmed.includes('type ') ||
+        trimmed.includes('class ')) {
+      inFunction = true;
+      coreLines.push(line);
+      continue;
+    }
+    
+    // Include return statements and key business logic
+    if (inFunction && (
+        trimmed.startsWith('return ') ||
+        trimmed.includes('useState') ||
+        trimmed.includes('useEffect') ||
+        trimmed.includes('fetch(') ||
+        trimmed.includes('supabase.') ||
+        trimmed.includes('await ') ||
+        trimmed.includes('if (') ||
+        trimmed.includes('switch (')
+      )) {
+      coreLines.push(line);
+    }
+    
+    // Track braces to know when function ends
+    braceCount += (line.match(/{/g) || []).length;
+    braceCount -= (line.match(/}/g) || []).length;
+    
+    if (inFunction && braceCount === 0) {
+      inFunction = false;
+    }
+  }
+  
+  return coreLines.join('\n');
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -363,7 +426,20 @@ serve(async (req) => {
       });
     }
 
-    // Sanitize, filter and truncate files
+    // Filter for core files only to save tokens and focus on important code
+    const coreFilePatterns = [
+      // Main application files
+      /\/(src|app|lib|components|pages|hooks|utils|types)\/.*\.(ts|tsx|js|jsx)$/,
+      // Configuration files
+      /\/(package\.json|tsconfig\.json|tailwind\.config\.|vite\.config\.|next\.config\.).*$/,
+      // Root files
+      /^[^\/]*\.(ts|tsx|js|jsx|json|md)$/,
+      // Supabase functions (core backend logic)
+      /\/supabase\/functions\/.*\.ts$/,
+      // Database schema
+      /\/supabase\/migrations\/.*\.sql$/
+    ];
+    
     const sanitized: SafeFile[] = files
       .filter((f): f is FileData => !!f && typeof (f as any).content === 'string')
       .map((f) => ({
@@ -371,7 +447,22 @@ serve(async (req) => {
         content: (f as any).content || '',
         type: (f as any).type,
       }))
-      .filter((f) => f.path && f.content);
+      .filter((f) => f.path && f.content)
+      // Only include core files to save tokens and focus analysis
+      .filter((f) => coreFilePatterns.some(pattern => pattern.test(f.path)))
+      // Prioritize by importance
+      .sort((a, b) => {
+        const getImportance = (path: string) => {
+          if (path.includes('package.json')) return 10;
+          if (path.includes('/pages/') || path.includes('/app/')) return 9;
+          if (path.includes('/components/')) return 8;
+          if (path.includes('/hooks/') || path.includes('/lib/')) return 7;
+          if (path.includes('supabase/functions')) return 6;
+          if (path.includes('config')) return 5;
+          return 1;
+        };
+        return getImportance(b.path) - getImportance(a.path);
+      });
 
     if (sanitized.length === 0) {
       return new Response(JSON.stringify({ error: 'No valid files with content provided' }), {
@@ -380,14 +471,22 @@ serve(async (req) => {
       });
     }
 
-    // Apply per-file truncation and overall budget
+    // Apply smart truncation focusing on core code sections
     const limited: SafeFile[] = [];
     let remaining = TOTAL_CHAR_BUDGET;
 
     for (const file of sanitized.slice(0, MAX_FILES)) {
       if (remaining <= 0) break;
+      
+      let content = file.content;
+      
+      // For code files, extract only the most important parts
+      if (file.path.match(/\.(ts|tsx|js|jsx)$/)) {
+        content = extractCoreCode(content);
+      }
+      
       const sliceLen = Math.min(MAX_CHARS_PER_FILE, Math.max(0, remaining));
-      const truncated = file.content.slice(0, sliceLen);
+      const truncated = content.slice(0, sliceLen);
       if (!truncated) continue;
       remaining -= truncated.length;
       limited.push({ ...file, content: truncated });
@@ -398,20 +497,48 @@ serve(async (req) => {
     const codebaseKnowledge = analyzeCodebase(limited);
     const knowledgeSection = formatCodebaseKnowledge(codebaseKnowledge);
 
-    // Build prompt with clear boundaries
-    const header = `Analyze the selected files from the repository "${repoName || 'repository'}" and produce a clear, structured report.
+    // Build prompt optimized for junior engineers and product managers
+    const header = `Analyze this ${repoName || 'project'} codebase and create a comprehensive report for junior engineers and product managers.
 
-The codebase knowledge analysis has already been generated and will be included at the beginning of the report. 
+IMPORTANT: Focus only on the core functionality shown in the code. Do not make assumptions about features not present.
 
-Please provide additional AI insights focusing on:
-- Project overview and purpose
-- Architecture & design decisions
-- Key components and their responsibilities  
-- Code quality observations (performance, security, readability)
-- Concrete recommendations (prioritized by impact)
-- Potential improvements and best practices
+Structure your analysis as follows:
 
-Use concise sections and bullet points where helpful. Be specific and actionable in your recommendations.`;
+## 📋 PROJECT SUMMARY
+- Brief description of what this application does
+- Main user-facing features (based on actual code)
+- Technology stack overview
+
+## 🏗️ ARCHITECTURE OVERVIEW  
+- High-level architecture pattern used
+- Key directories and their purposes
+- Data flow between components
+- Backend/API structure (if present)
+
+## 🔧 KEY COMPONENTS
+- Most important files/components and what they do
+- Main user flows through the application
+- Critical business logic locations
+
+## 📊 CODE QUALITY ASSESSMENT
+- Overall code maintainability (1-10 scale with explanation)
+- Security considerations found
+- Performance observations
+- Code organization strengths/weaknesses
+
+## 🎯 PRIORITY RECOMMENDATIONS
+List 3-5 actionable recommendations in order of business impact:
+1. High impact, low effort improvements
+2. Security or performance critical fixes
+3. Code organization improvements
+4. Feature enhancement opportunities
+
+## 🚀 NEXT STEPS FOR DEVELOPMENT
+- Immediate action items for developers
+- Suggested development workflow improvements
+- Areas needing technical debt cleanup
+
+Keep explanations clear for non-technical stakeholders while being specific enough for developers to act on.`;
 
     const codeSections = limited
       .map((f) => `FILE: ${f.path}\nTYPE: ${f.type || 'text'}\n-----\n${f.content}\n\n`)

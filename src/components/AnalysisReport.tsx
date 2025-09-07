@@ -239,6 +239,18 @@ const AnalysisReport = ({ projectId, projectName, onAnalysisComplete }: Analysis
         } else if (title.toLowerCase().includes('technology') || title.toLowerCase().includes('stack')) {
           icon = <TrendingUp className="w-5 h-5" />;
           colorClass = "text-primary";
+        } else if (title.toLowerCase().includes('architecture') || title.toLowerCase().includes('overview')) {
+          icon = <TrendingUp className="w-5 h-5" />;
+          colorClass = "text-primary";
+        } else if (title.toLowerCase().includes('components') || title.toLowerCase().includes('key')) {
+          icon = <FileText className="w-5 h-5" />;
+          colorClass = "text-accent";
+        } else if (title.toLowerCase().includes('recommendations') || title.toLowerCase().includes('priority')) {
+          icon = <AlertTriangle className="w-5 h-5" />;
+          colorClass = "text-orange-500";
+        } else if (title.toLowerCase().includes('next steps') || title.toLowerCase().includes('development')) {
+          icon = <Users className="w-5 h-5" />;
+          colorClass = "text-green-600";
         }
 
         elements.push(
@@ -291,12 +303,40 @@ const AnalysisReport = ({ projectId, projectName, onAnalysisComplete }: Analysis
         return;
       }
 
+      // Handle numbered lists (for priorities/recommendations)
+      if (line.match(/^\d+\.\s/)) {
+        flushList();
+        const number = line.match(/^(\d+)\.\s(.*)$/);
+        if (number) {
+          elements.push(
+            <div key={index} className="flex items-start gap-3 mb-4 p-3 bg-muted/30 rounded-lg border border-border">
+              <div className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
+                {number[1]}
+              </div>
+              <p className="text-foreground font-medium leading-relaxed">
+                {number[2]}
+              </p>
+            </div>
+          );
+        }
+        return;
+      }
+
       // Handle regular paragraphs
       flushList();
       if (line.trim()) {
+        // Add highlighting for key metrics and scores
+        let content = line;
+        let className = "text-muted-foreground mb-4 leading-relaxed text-base";
+        
+        // Highlight scores and ratings
+        if (line.match(/\d+\/\d+|\d+\.\d+\/\d+|\(\d+-\d+\s+scale\)/)) {
+          className = "text-foreground mb-4 leading-relaxed text-base font-medium bg-muted/20 p-2 rounded border-l-2 border-accent";
+        }
+        
         elements.push(
-          <p key={index} className="text-muted-foreground mb-4 leading-relaxed text-base">
-            {line}
+          <p key={index} className={className}>
+            {content}
           </p>
         );
       }
@@ -396,9 +436,9 @@ const AnalysisReport = ({ projectId, projectName, onAnalysisComplete }: Analysis
               <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 AI Codebase Analysis
               </span>
-              <CardDescription className="mt-1">
-                Get comprehensive insights about your project from a 20-year engineering perspective
-              </CardDescription>
+          <CardDescription className="mt-1">
+            Get comprehensive insights optimized for developers and product managers
+          </CardDescription>
             </div>
           </CardTitle>
         </CardHeader>
@@ -407,7 +447,7 @@ const AnalysisReport = ({ projectId, projectName, onAnalysisComplete }: Analysis
             <div className="space-y-2">
               <p className="font-medium text-lg">{projectName}</p>
               <p className="text-sm text-muted-foreground">
-                Ready for detailed analysis and project management insights
+                Analyzes core functionality and provides actionable insights for technical and business stakeholders
               </p>
             </div>
             <Button 
