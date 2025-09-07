@@ -295,9 +295,6 @@ function analyzeCodebase(files: SafeFile[]): CodebaseKnowledge {
 }
 
 function formatCodebaseKnowledge(knowledge: CodebaseKnowledge): string {
-  // Create a simplified dependency data structure for the frontend
-  const dependencyData = JSON.stringify(knowledge.dependencies.internal);
-  
   return `## 📊 CODEBASE KNOWLEDGE ANALYSIS
 
 ### 🏗️ Project Structure
@@ -313,9 +310,6 @@ function formatCodebaseKnowledge(knowledge: CodebaseKnowledge): string {
   .slice(0, 8)
   .map(([ext, count]) => `${ext} (${count})`)
   .join(', ')}
-
-### 🌳 Dependency Tree Chart
-<dependency-tree-data>${dependencyData}</dependency-tree-data>
 
 ### 🔗 Dependencies Analysis
 - **External Dependencies**: ${knowledge.dependencies.external.length} packages
