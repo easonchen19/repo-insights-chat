@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import UploadButton from "./UploadButton";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -186,7 +186,6 @@ const Navigation = () => {
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
               <>
-                <UploadButton variant="outline" size="sm" />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
@@ -266,7 +265,6 @@ const Navigation = () => {
               </NavLink>
               {user ? (
                 <>
-                  <UploadButton variant="outline" size="sm" />
                   {isGitHubConnected ? (
                     <Button
                       variant="outline"
