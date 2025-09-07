@@ -7,6 +7,7 @@ import { Brain, Clock, FileText, Users, TrendingUp, AlertTriangle, CheckCircle, 
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useModelSelection } from "./ModelSelector";
+import DependencyTreeChart from "./DependencyTreeChart";
 
 interface AnalysisReportProps {
   projectId: string;
@@ -189,6 +190,26 @@ const AnalysisReport = ({ projectId, projectName, onAnalysisComplete }: Analysis
     };
 
     lines.forEach((line, index) => {
+      // Handle dependency tree data
+      if (line.includes('<dependency-tree-data>')) {
+        flushList();
+        const dataStart = line.indexOf('<dependency-tree-data>') + '<dependency-tree-data>'.length;
+        const dataEnd = line.indexOf('</dependency-tree-data>');
+        if (dataEnd > dataStart) {
+          try {
+            const dependencyData = JSON.parse(line.substring(dataStart, dataEnd));
+            elements.push(
+              <div key={index} className="mb-6">
+                <DependencyTreeChart dependencies={dependencyData} />
+              </div>
+            );
+          } catch (e) {
+            console.error('Failed to parse dependency data:', e);
+          }
+        }
+        return;
+      }
+
       // Handle code blocks
       if (line.trim().startsWith('```')) {
         if (isInCodeBlock) {

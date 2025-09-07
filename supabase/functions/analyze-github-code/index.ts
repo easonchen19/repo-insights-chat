@@ -294,66 +294,9 @@ function analyzeCodebase(files: SafeFile[]): CodebaseKnowledge {
   };
 }
 
-function generateDependencyTree(knowledge: CodebaseKnowledge): string {
-  const { internal } = knowledge.dependencies;
-  const tree: string[] = [];
-  const visited = new Set<string>();
-  
-  function addToTree(filePath: string, depth = 0, prefix = ""): void {
-    if (visited.has(filePath) || depth > 3) return; // Prevent infinite loops and limit depth
-    visited.add(filePath);
-    
-    const indent = "  ".repeat(depth);
-    const fileName = filePath.split('/').pop() || filePath;
-    const deps = internal[filePath] || [];
-    
-    if (depth === 0) {
-      tree.push(`${prefix}📁 ${fileName}`);
-    } else {
-      tree.push(`${indent}├── ${fileName}`);
-    }
-    
-    // Show only direct dependencies to keep it simple
-    if (depth < 2) {
-      deps.slice(0, 3).forEach((dep, index) => {
-        const isLast = index === deps.length - 1 || index === 2;
-        const depFileName = dep.replace(/^\.\/|^\.\.\//, '').split('/').pop() || dep;
-        tree.push(`${indent}  ${isLast ? '└──' : '├──'} ${depFileName}`);
-      });
-      
-      if (deps.length > 3) {
-        tree.push(`${indent}  └── ... ${deps.length - 3} more dependencies`);
-      }
-    }
-  }
-  
-  // Get main entry points (files that are not imported by others)
-  const importedFiles = new Set(
-    Object.values(internal).flat().map(imp => 
-      imp.replace(/^\.\/|^\.\.\//, '').replace(/\.(js|ts|jsx|tsx)$/, '')
-    )
-  );
-  
-  const entryPoints = Object.keys(internal).filter(file => {
-    const normalizedFile = file.replace(/\.(js|ts|jsx|tsx)$/, '');
-    return !importedFiles.has(normalizedFile);
-  }).slice(0, 5); // Limit to 5 entry points
-  
-  if (entryPoints.length === 0 && Object.keys(internal).length > 0) {
-    // If no clear entry points, show the first few files
-    entryPoints.push(...Object.keys(internal).slice(0, 3));
-  }
-  
-  entryPoints.forEach((entry, index) => {
-    if (index > 0) tree.push("");
-    addToTree(entry, 0, "");
-  });
-  
-  return tree.length > 0 ? tree.join('\n') : 'No internal dependencies detected';
-}
-
 function formatCodebaseKnowledge(knowledge: CodebaseKnowledge): string {
-  const dependencyTree = generateDependencyTree(knowledge);
+  // Create a simplified dependency data structure for the frontend
+  const dependencyData = JSON.stringify(knowledge.dependencies.internal);
   
   return `## 📊 CODEBASE KNOWLEDGE ANALYSIS
 
@@ -372,9 +315,7 @@ function formatCodebaseKnowledge(knowledge: CodebaseKnowledge): string {
   .join(', ')}
 
 ### 🌳 Dependency Tree Chart
-\`\`\`
-${dependencyTree}
-\`\`\`
+<dependency-tree-data>${dependencyData}</dependency-tree-data>
 
 ### 🔗 Dependencies Analysis
 - **External Dependencies**: ${knowledge.dependencies.external.length} packages
