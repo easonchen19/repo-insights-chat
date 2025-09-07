@@ -70,10 +70,10 @@ const Hero = () => {
             <>
               <UploadButton variant="hero" size="default" />
               <Button 
-                variant="outline" 
+                variant="hero" 
                 size="lg" 
                 asChild 
-                className="border-primary/30 hover:border-primary/50 hover:bg-primary/10 transition-all duration-500 text-lg px-8 py-4 h-auto"
+                className="text-lg px-8 py-4 h-auto"
               >
                 <NavLink to="/github">
                   <Github className="w-5 h-5 mr-2" />
