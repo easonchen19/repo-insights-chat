@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { ThemeProvider } from "./hooks/useTheme";
 import Navigation from "./components/Navigation";
+import Footer from "./components/Footer";
 import Index from "./pages/Index";
 import Upload from "./pages/Upload";
 import Analyzer from "./pages/Analyzer";
@@ -13,6 +14,7 @@ import Projects from "./pages/Projects";
 import GitHub from "./pages/GitHub";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import Contact from "./pages/Contact";
 
 const queryClient = new QueryClient();
 
@@ -31,10 +33,12 @@ const App = () => (
               <Route path="/upload" element={<Upload />} />
               <Route path="/analyzer" element={<Analyzer />} />
               <Route path="/projects" element={<Projects />} />
+              <Route path="/contact" element={<Contact />} />
               <Route path="/github" element={<GitHub />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <Footer />
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>
