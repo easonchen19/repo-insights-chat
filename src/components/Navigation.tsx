@@ -193,40 +193,12 @@ const Navigation = () => {
                       Account
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {isGitHubConnected ? (
-                      <>
-                        {githubUsername && (
-                          <DropdownMenuItem asChild>
-                            <a 
-                              href={`https://github.com/${githubUsername}`} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="flex items-center"
-                            >
-                              <ExternalLink className="w-4 h-4 mr-2" />
-                              GitHub Homepage
-                            </a>
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={handleGitHubDisconnect} disabled={isLoading}>
-                          <Unlink className="w-4 h-4 mr-2" />
-                          {isLoading ? 'Disconnecting...' : 'GitHub Disconnect'}
-                        </DropdownMenuItem>
-                      </>
-                    ) : (
-                      <DropdownMenuItem onClick={handleGitHubConnect} disabled={isLoading}>
-                        <Link className="w-4 h-4 mr-2" />
-                        {isLoading ? 'Connecting...' : 'GitHub Connect'}
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut}>
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Sign Out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
+                   <DropdownMenuContent>
+                     <DropdownMenuItem onClick={handleSignOut}>
+                       <LogOut className="w-4 h-4 mr-2" />
+                       Sign Out
+                     </DropdownMenuItem>
+                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
             ) : (
@@ -263,42 +235,19 @@ const Navigation = () => {
                 <Github className="w-4 h-4" />
                 GitHub
               </NavLink>
-              {user ? (
-                <>
-                  {isGitHubConnected ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleGitHubDisconnect}
-                      disabled={isLoading}
-                      className="flex items-center gap-2 justify-start"
-                    >
-                      <Unlink className="w-4 h-4" />
-                      {isLoading ? 'Disconnecting...' : 'GitHub Disconnect'}
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleGitHubConnect}
-                      disabled={isLoading}
-                      className="flex items-center gap-2 justify-start"
-                    >
-                      <Link className="w-4 h-4" />
-                      {isLoading ? 'Connecting...' : 'GitHub Connect'}
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSignOut}
-                    className="flex items-center gap-2 justify-start"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sign Out
-                  </Button>
-                </>
-              ) : (
+               {user ? (
+                 <>
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     onClick={handleSignOut}
+                     className="flex items-center gap-2 justify-start"
+                   >
+                     <LogOut className="w-4 h-4" />
+                     Sign Out
+                   </Button>
+                 </>
+               ) : (
                 <Button variant="outline" size="sm" asChild>
                   <NavLink to="/auth">Sign In</NavLink>
                 </Button>
