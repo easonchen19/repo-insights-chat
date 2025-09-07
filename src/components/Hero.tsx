@@ -67,7 +67,20 @@ const Hero = () => {
         
         <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
           {user ? (
-            <UploadButton variant="hero" size="default" />
+            <>
+              <UploadButton variant="hero" size="default" />
+              <Button 
+                variant="outline" 
+                size="lg" 
+                asChild 
+                className="border-primary/30 hover:border-primary/50 hover:bg-primary/10 transition-all duration-500 text-lg px-8 py-4 h-auto"
+              >
+                <NavLink to="/github">
+                  <Github className="w-5 h-5 mr-2" />
+                  Git Connect
+                </NavLink>
+              </Button>
+            </>
           ) : (
             <Button 
               variant="default" 
