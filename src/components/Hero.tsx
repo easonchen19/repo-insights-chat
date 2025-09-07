@@ -68,12 +68,12 @@ const Hero = () => {
         <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
           {user ? (
             <>
-              <UploadButton variant="hero" size="default" />
+              <UploadButton variant="hero" size="lg" className="text-lg px-8 py-4 h-auto w-48" />
               <Button 
                 variant="hero" 
                 size="lg" 
                 asChild 
-                className="text-lg px-8 py-4 h-auto"
+                className="text-lg px-8 py-4 h-auto w-48"
               >
                 <NavLink to="/github">
                   <Github className="w-5 h-5 mr-2" />

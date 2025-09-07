@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 
 interface UploadButtonProps extends Omit<ButtonProps, 'onClick'> {
   variant?: "outline" | "hero";
-  size?: "sm" | "default";
+  size?: "sm" | "default" | "lg";
 }
 
 const UploadButton = ({ variant = "outline", size = "sm", ...props }: UploadButtonProps) => {
