@@ -18,6 +18,326 @@ const MAX_FILES = 40;
 const MAX_CHARS_PER_FILE = 4000;
 const TOTAL_CHAR_BUDGET = 120_000;
 
+// Codebase analysis interfaces
+interface DependencyInfo {
+  imports: string[];
+  exports: string[];
+  dependencies: string[];
+}
+
+interface FileAnalysis {
+  path: string;
+  type: string;
+  language: string;
+  size: number;
+  complexity: number;
+  dependencies: DependencyInfo;
+  patterns: string[];
+}
+
+interface CodebaseKnowledge {
+  structure: {
+    totalFiles: number;
+    languages: Record<string, number>;
+    directories: string[];
+    fileTypes: Record<string, number>;
+  };
+  dependencies: {
+    external: string[];
+    internal: Record<string, string[]>;
+    circular: string[];
+  };
+  patterns: {
+    architecturalPatterns: string[];
+    designPatterns: string[];
+    codeSmells: string[];
+  };
+  complexity: {
+    averageComplexity: number;
+    highComplexityFiles: string[];
+    maintainabilityIndex: number;
+  };
+  technologies: {
+    frameworks: string[];
+    libraries: string[];
+    tools: string[];
+  };
+}
+
+// Codebase analysis functions
+function getFileLanguage(filePath: string): string {
+  const ext = filePath.split('.').pop()?.toLowerCase() || '';
+  const languageMap: Record<string, string> = {
+    'js': 'JavaScript',
+    'jsx': 'JavaScript React',
+    'ts': 'TypeScript',
+    'tsx': 'TypeScript React',
+    'py': 'Python',
+    'java': 'Java',
+    'cpp': 'C++',
+    'c': 'C',
+    'cs': 'C#',
+    'php': 'PHP',
+    'rb': 'Ruby',
+    'go': 'Go',
+    'rs': 'Rust',
+    'swift': 'Swift',
+    'kt': 'Kotlin',
+    'css': 'CSS',
+    'scss': 'SCSS',
+    'html': 'HTML',
+    'json': 'JSON',
+    'xml': 'XML',
+    'yml': 'YAML',
+    'yaml': 'YAML',
+    'md': 'Markdown',
+    'sql': 'SQL',
+    'sh': 'Shell',
+    'dockerfile': 'Docker'
+  };
+  return languageMap[ext] || 'Unknown';
+}
+
+function calculateComplexity(content: string, language: string): number {
+  let complexity = 1; // Base complexity
+  
+  // Language-specific complexity patterns
+  const patterns = {
+    conditionals: /\b(if|else|switch|case|when|unless)\b/g,
+    loops: /\b(for|while|do|forEach|map|filter|reduce)\b/g,
+    functions: /\b(function|def|fn|func|=>\s*{|\w+\s*\(.*\)\s*{)/g,
+    exceptions: /\b(try|catch|except|finally|throw|raise)\b/g,
+    async: /\b(async|await|Promise|then|catch)\b/g
+  };
+  
+  for (const [type, pattern] of Object.entries(patterns)) {
+    const matches = content.match(pattern);
+    if (matches) {
+      complexity += matches.length;
+    }
+  }
+  
+  return Math.min(complexity, 50); // Cap at 50
+}
+
+function extractDependencies(content: string, filePath: string): DependencyInfo {
+  const imports: string[] = [];
+  const exports: string[] = [];
+  const dependencies: string[] = [];
+  
+  // Extract imports (JavaScript/TypeScript)
+  const importRegex = /import.*?from\s+['"`]([^'"`]+)['"`]/g;
+  const requireRegex = /require\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g;
+  
+  let match;
+  while ((match = importRegex.exec(content)) !== null) {
+    const importPath = match[1];
+    imports.push(importPath);
+    if (!importPath.startsWith('.') && !importPath.startsWith('/')) {
+      dependencies.push(importPath.split('/')[0]);
+    }
+  }
+  
+  while ((match = requireRegex.exec(content)) !== null) {
+    const requirePath = match[1];
+    imports.push(requirePath);
+    if (!requirePath.startsWith('.') && !requirePath.startsWith('/')) {
+      dependencies.push(requirePath.split('/')[0]);
+    }
+  }
+  
+  // Extract exports
+  const exportRegex = /export\s+(default\s+)?(class|function|const|let|var|interface|type)\s+(\w+)/g;
+  while ((match = exportRegex.exec(content)) !== null) {
+    exports.push(match[3]);
+  }
+  
+  return {
+    imports: [...new Set(imports)],
+    exports: [...new Set(exports)],
+    dependencies: [...new Set(dependencies)]
+  };
+}
+
+function detectPatterns(content: string, filePath: string): string[] {
+  const patterns: string[] = [];
+  
+  // Architectural patterns
+  if (content.includes('useState') || content.includes('useEffect')) patterns.push('React Hooks');
+  if (content.includes('createContext') || content.includes('useContext')) patterns.push('Context Pattern');
+  if (content.includes('Redux') || content.includes('dispatch')) patterns.push('Redux Pattern');
+  if (content.includes('observer') || content.includes('subscribe')) patterns.push('Observer Pattern');
+  if (content.includes('factory') || content.includes('create')) patterns.push('Factory Pattern');
+  if (content.includes('singleton')) patterns.push('Singleton Pattern');
+  if (content.includes('middleware') || content.includes('next(')) patterns.push('Middleware Pattern');
+  
+  // Framework patterns
+  if (content.includes('express') || content.includes('app.get')) patterns.push('Express.js');
+  if (content.includes('router') || content.includes('Route')) patterns.push('Routing');
+  if (content.includes('async') && content.includes('await')) patterns.push('Async/Await');
+  if (content.includes('Promise')) patterns.push('Promises');
+  if (content.includes('try') && content.includes('catch')) patterns.push('Error Handling');
+  
+  // Code smells
+  if (content.length > 10000) patterns.push('Large File');
+  if ((content.match(/function|const.*=.*=>|def /g) || []).length > 20) patterns.push('Many Functions');
+  if (content.split('\n').length > 500) patterns.push('Long File');
+  
+  return patterns;
+}
+
+function analyzeCodebase(files: SafeFile[]): CodebaseKnowledge {
+  const fileAnalyses: FileAnalysis[] = [];
+  const allDependencies = new Set<string>();
+  const allPatterns = new Set<string>();
+  const languageCounts: Record<string, number> = {};
+  const fileTypeCounts: Record<string, number> = {};
+  const directories = new Set<string>();
+  
+  let totalComplexity = 0;
+  
+  for (const file of files) {
+    const language = getFileLanguage(file.path);
+    const complexity = calculateComplexity(file.content, language);
+    const dependencies = extractDependencies(file.content, file.path);
+    const patterns = detectPatterns(file.content, file.path);
+    
+    // Count languages
+    languageCounts[language] = (languageCounts[language] || 0) + 1;
+    
+    // Count file types
+    const ext = file.path.split('.').pop()?.toLowerCase() || 'unknown';
+    fileTypeCounts[ext] = (fileTypeCounts[ext] || 0) + 1;
+    
+    // Extract directories
+    const dir = file.path.split('/').slice(0, -1).join('/');
+    if (dir) directories.add(dir);
+    
+    // Collect dependencies and patterns
+    dependencies.dependencies.forEach(dep => allDependencies.add(dep));
+    patterns.forEach(pattern => allPatterns.add(pattern));
+    
+    totalComplexity += complexity;
+    
+    fileAnalyses.push({
+      path: file.path,
+      type: file.type || 'unknown',
+      language,
+      size: file.content.length,
+      complexity,
+      dependencies,
+      patterns
+    });
+  }
+  
+  // Detect frameworks and tools
+  const frameworks: string[] = [];
+  const libraries: string[] = [];
+  const tools: string[] = [];
+  
+  for (const dep of allDependencies) {
+    if (['react', 'vue', 'angular', 'svelte', 'next', 'nuxt'].includes(dep.toLowerCase())) {
+      frameworks.push(dep);
+    } else if (['express', 'fastify', 'koa', 'django', 'flask', 'spring'].includes(dep.toLowerCase())) {
+      frameworks.push(dep);
+    } else if (['webpack', 'vite', 'parcel', 'rollup', 'gulp', 'grunt'].includes(dep.toLowerCase())) {
+      tools.push(dep);
+    } else {
+      libraries.push(dep);
+    }
+  }
+  
+  // Detect circular dependencies (simplified)
+  const internalDeps: Record<string, string[]> = {};
+  for (const analysis of fileAnalyses) {
+    const internalImports = analysis.dependencies.imports.filter(imp => 
+      imp.startsWith('./') || imp.startsWith('../') || imp.startsWith('/')
+    );
+    internalDeps[analysis.path] = internalImports;
+  }
+  
+  return {
+    structure: {
+      totalFiles: files.length,
+      languages: languageCounts,
+      directories: Array.from(directories),
+      fileTypes: fileTypeCounts
+    },
+    dependencies: {
+      external: Array.from(allDependencies),
+      internal: internalDeps,
+      circular: [] // Simplified - would need graph analysis for real detection
+    },
+    patterns: {
+      architecturalPatterns: Array.from(allPatterns).filter(p => 
+        ['React Hooks', 'Context Pattern', 'Redux Pattern', 'Observer Pattern'].includes(p)
+      ),
+      designPatterns: Array.from(allPatterns).filter(p => 
+        ['Factory Pattern', 'Singleton Pattern', 'Middleware Pattern'].includes(p)
+      ),
+      codeSmells: Array.from(allPatterns).filter(p => 
+        ['Large File', 'Many Functions', 'Long File'].includes(p)
+      )
+    },
+    complexity: {
+      averageComplexity: totalComplexity / files.length,
+      highComplexityFiles: fileAnalyses
+        .filter(f => f.complexity > 15)
+        .map(f => f.path),
+      maintainabilityIndex: Math.max(0, 100 - (totalComplexity / files.length) * 2)
+    },
+    technologies: {
+      frameworks,
+      libraries: libraries.slice(0, 20), // Limit for readability
+      tools
+    }
+  };
+}
+
+function formatCodebaseKnowledge(knowledge: CodebaseKnowledge): string {
+  return `## 📊 CODEBASE KNOWLEDGE ANALYSIS
+
+### 🏗️ Project Structure
+- **Total Files**: ${knowledge.structure.totalFiles}
+- **Primary Languages**: ${Object.entries(knowledge.structure.languages)
+  .sort(([,a], [,b]) => b - a)
+  .slice(0, 5)
+  .map(([lang, count]) => `${lang} (${count})`)
+  .join(', ')}
+- **Directory Structure**: ${knowledge.structure.directories.length} directories
+- **File Types**: ${Object.entries(knowledge.structure.fileTypes)
+  .sort(([,a], [,b]) => b - a)
+  .slice(0, 8)
+  .map(([ext, count]) => `${ext} (${count})`)
+  .join(', ')}
+
+### 🔗 Dependencies Analysis
+- **External Dependencies**: ${knowledge.dependencies.external.length} packages
+  - Key libraries: ${knowledge.dependencies.external.slice(0, 10).join(', ')}
+- **Internal Module Connections**: ${Object.keys(knowledge.dependencies.internal).length} files with internal imports
+${knowledge.dependencies.circular.length > 0 ? `- **⚠️ Circular Dependencies**: ${knowledge.dependencies.circular.join(', ')}` : '- **✅ No circular dependencies detected**'}
+
+### 🎯 Code Patterns & Architecture
+- **Architectural Patterns**: ${knowledge.patterns.architecturalPatterns.length > 0 ? knowledge.patterns.architecturalPatterns.join(', ') : 'None detected'}
+- **Design Patterns**: ${knowledge.patterns.designPatterns.length > 0 ? knowledge.patterns.designPatterns.join(', ') : 'None detected'}
+${knowledge.patterns.codeSmells.length > 0 ? `- **⚠️ Code Smells**: ${knowledge.patterns.codeSmells.join(', ')}` : '- **✅ No major code smells detected**'}
+
+### 📈 Complexity Metrics
+- **Average Complexity**: ${knowledge.complexity.averageComplexity.toFixed(1)}/50
+- **Maintainability Index**: ${knowledge.complexity.maintainabilityIndex.toFixed(1)}/100 ${knowledge.complexity.maintainabilityIndex > 70 ? '🟢' : knowledge.complexity.maintainabilityIndex > 40 ? '🟡' : '🔴'}
+${knowledge.complexity.highComplexityFiles.length > 0 ? `- **High Complexity Files**: ${knowledge.complexity.highComplexityFiles.slice(0, 5).join(', ')}` : '- **✅ No high-complexity files detected**'}
+
+### 🛠️ Technology Stack
+- **Frameworks**: ${knowledge.technologies.frameworks.length > 0 ? knowledge.technologies.frameworks.join(', ') : 'None detected'}
+- **Build Tools**: ${knowledge.technologies.tools.length > 0 ? knowledge.technologies.tools.join(', ') : 'None detected'}
+- **Top Libraries**: ${knowledge.technologies.libraries.slice(0, 8).join(', ')}
+
+---
+
+## 🤖 AI ANALYSIS REPORT
+`;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -73,16 +393,25 @@ serve(async (req) => {
       limited.push({ ...file, content: truncated });
     }
 
-    // Build prompt with clear boundaries
-    const header = `Analyze the selected files from the repository "${repoName || 'repository'}" and produce a clear, structured report with:
-- Project overview
-- Architecture & structure
-- Key components and responsibilities
-- Technology stack
-- Code quality observations (performance, security, readability)
-- Concrete recommendations (prioritized)
+    // Generate codebase knowledge analysis
+    console.log('🔍 Generating codebase knowledge analysis...');
+    const codebaseKnowledge = analyzeCodebase(limited);
+    const knowledgeSection = formatCodebaseKnowledge(codebaseKnowledge);
 
-Use concise sections and bullet points where helpful.`;
+    // Build prompt with clear boundaries
+    const header = `Analyze the selected files from the repository "${repoName || 'repository'}" and produce a clear, structured report.
+
+The codebase knowledge analysis has already been generated and will be included at the beginning of the report. 
+
+Please provide additional AI insights focusing on:
+- Project overview and purpose
+- Architecture & design decisions
+- Key components and their responsibilities  
+- Code quality observations (performance, security, readability)
+- Concrete recommendations (prioritized by impact)
+- Potential improvements and best practices
+
+Use concise sections and bullet points where helpful. Be specific and actionable in your recommendations.`;
 
     const codeSections = limited
       .map((f) => `FILE: ${f.path}\nTYPE: ${f.type || 'text'}\n-----\n${f.content}\n\n`)
@@ -134,6 +463,9 @@ Use concise sections and bullet points where helpful.`;
     const stream = new ReadableStream({
       async start(controller) {
         try {
+          // First, send the codebase knowledge analysis
+          const knowledgeChunk = { type: 'delta', text: knowledgeSection };
+          controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(knowledgeChunk)}\n\n`));
           const reader = response!.body?.getReader();
           if (!reader) {
             controller.close();
