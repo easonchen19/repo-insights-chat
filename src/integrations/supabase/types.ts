@@ -17,7 +17,6 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
-          github_access_token: string | null
           github_connected_at: string | null
           github_user_id: string | null
           github_username: string | null
@@ -26,7 +25,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          github_access_token?: string | null
           github_connected_at?: string | null
           github_user_id?: string | null
           github_username?: string | null
@@ -35,7 +33,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          github_access_token?: string | null
           github_connected_at?: string | null
           github_user_id?: string | null
           github_username?: string | null
@@ -115,6 +112,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_tokens: {
+        Row: {
+          created_at: string
+          encrypted_token: string
+          id: string
+          last_used_at: string | null
+          token_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          encrypted_token: string
+          id?: string
+          last_used_at?: string | null
+          token_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          encrypted_token?: string
+          id?: string
+          last_used_at?: string | null
+          token_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       profiles_secure: {
@@ -126,24 +153,6 @@ export type Database = {
           has_github_token: boolean | null
           id: string | null
           updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          github_connected_at?: string | null
-          github_user_id?: string | null
-          github_username?: string | null
-          has_github_token?: never
-          id?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          github_connected_at?: string | null
-          github_user_id?: string | null
-          github_username?: string | null
-          has_github_token?: never
-          id?: string | null
-          updated_at?: string | null
         }
         Relationships: []
       }
@@ -175,6 +184,10 @@ export type Database = {
       }
       migrate_user_data: {
         Args: { from_user_id: string; to_user_id: string }
+        Returns: undefined
+      }
+      track_token_usage: {
+        Args: { token_type_param: string }
         Returns: undefined
       }
       update_github_token: {
