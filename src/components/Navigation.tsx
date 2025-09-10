@@ -38,14 +38,15 @@ const Navigation = () => {
 
       try {
         const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('github_access_token, github_username')
+          .from('profiles_secure')
+          .select('has_github_token, github_username')
           .eq('id', user.id)
           .maybeSingle();
 
         if (!cancelled) {
-          setIsGitHubConnected(!error && !!profile?.github_access_token);
-          setGithubUsername(profile?.github_username || null);
+          const hasToken = (profile as any)?.has_github_token === true;
+          setIsGitHubConnected(!error && hasToken);
+          setGithubUsername((profile as any)?.github_username || null);
         }
       } catch (error) {
         console.error('Error checking GitHub connection:', error);

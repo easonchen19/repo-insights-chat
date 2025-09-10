@@ -185,16 +185,9 @@ serve(async (req) => {
     if (action === 'disconnectGitHub') {
       console.log('🔌 Disconnecting GitHub for user:', user.id);
       
-      // Remove GitHub connection data from user profile
+      // Remove GitHub connection data and token via secure RPC
       const { error: updateError } = await userSupabase
-        .from('profiles')
-        .update({
-          github_access_token: null,
-          github_username: null,
-          github_user_id: null,
-          github_connected_at: null
-        })
-        .eq('id', user.id);
+        .rpc('clear_github_connection');
 
       if (updateError) {
         console.error('❌ Failed to disconnect GitHub:', updateError);

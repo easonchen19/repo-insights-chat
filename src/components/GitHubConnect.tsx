@@ -338,23 +338,23 @@ const GitHubConnect = () => {
 
     try {
       const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('github_access_token, github_username, github_connected_at')
+        .from('profiles_secure')
+        .select('has_github_token, github_username, github_connected_at')
         .eq('id', user.id)
         .maybeSingle();
 
       console.log('👤 Profile check result:', {
         hasProfile: !!profile,
-        hasToken: !!profile?.github_access_token,
-        username: profile?.github_username,
-        connectedAt: profile?.github_connected_at,
-        error: error?.message
+        hasToken: !!(profile as any)?.has_github_token,
+        username: (profile as any)?.github_username,
+        connectedAt: (profile as any)?.github_connected_at,
+        error: (error as any)?.message
       });
 
-      if (!error && profile?.github_access_token) {
+      if (!error && (profile as any)?.has_github_token) {
         console.log('✅ GitHub connection found, setting connected state');
         setIsConnected(true);
-        setUserInfo({ username: profile.github_username });
+        setUserInfo({ username: (profile as any).github_username });
         // Don't automatically fetch repositories - wait for user to click "Show Repo"
       } else {
         console.log('❌ No GitHub connection found');
@@ -459,16 +459,12 @@ const GitHubConnect = () => {
         id: (userData?.user_id || userData?.id || userData?.sub || '').toString(),
       };
       
-      // Directly update the profile table with the GitHub data for the original user
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: userId,
-          github_access_token: accessToken,
-          github_username: normalized.login,
-          github_user_id: normalized.id,
-          github_connected_at: new Date().toISOString()
-        });
+      // Store token securely using RPC and update non-sensitive profile data
+      const { error } = await supabase.rpc('update_github_token', {
+        user_id: userId,
+        new_token: accessToken,
+        github_user_data: normalized as any,
+      });
 
       if (error) {
         console.error('❌ Database error:', error);
