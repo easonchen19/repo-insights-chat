@@ -41,6 +41,36 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles_secure_data: {
+        Row: {
+          created_at: string
+          github_connected_at: string | null
+          github_user_id: string | null
+          github_username: string | null
+          has_github_token: boolean
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          github_connected_at?: string | null
+          github_user_id?: string | null
+          github_username?: string | null
+          has_github_token?: boolean
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          github_connected_at?: string | null
+          github_user_id?: string | null
+          github_username?: string | null
+          has_github_token?: boolean
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       project_analyses: {
         Row: {
           analysis_report: string
@@ -154,6 +184,24 @@ export type Database = {
           id: string | null
           updated_at: string | null
         }
+        Insert: {
+          created_at?: string | null
+          github_connected_at?: string | null
+          github_user_id?: string | null
+          github_username?: string | null
+          has_github_token?: boolean | null
+          id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          github_connected_at?: string | null
+          github_user_id?: string | null
+          github_username?: string | null
+          has_github_token?: boolean | null
+          id?: string | null
+          updated_at?: string | null
+        }
         Relationships: []
       }
     }
@@ -169,6 +217,18 @@ export type Database = {
       encrypt_github_token: {
         Args: { token: string }
         Returns: string
+      }
+      get_current_user_profile_secure: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          github_connected_at: string
+          github_user_id: string
+          github_username: string
+          has_github_token: boolean
+          id: string
+          updated_at: string
+        }[]
       }
       get_user_github_token: {
         Args: Record<PropertyKey, never>
