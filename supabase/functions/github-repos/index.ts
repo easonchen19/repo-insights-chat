@@ -28,6 +28,7 @@ serve(async (req) => {
 
   try {
     console.log('🔍 GitHub function called with method:', req.method);
+    console.log('🔍 Request URL:', req.url);
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -75,6 +76,7 @@ serve(async (req) => {
 
     const { action, accessToken, repo_owner, repo_name, githubUserData } = await req.json();
     console.log('🎯 Action requested:', action);
+    console.log('🎯 Request body parsed successfully');
 
     if (action === 'saveGitHubConnection') {
       console.log('💾 Saving GitHub connection for user:', user.id);
@@ -102,9 +104,19 @@ serve(async (req) => {
     }
 
     if (action === 'fetchRepos') {
-      console.log('📂 Fetching repositories for user:', user.id);
+      console.log('📂 Starting fetchRepos action for user:', user.id);
+      console.log('🔍 Auth context - session exists:', !!session, 'user email:', user.email);
       console.log('🔍 Auth context - session exists:', !!session, 'user email:', user.email);
       
+      // Add simple test response first to verify basic function works
+      console.log('🧪 Testing basic function response...');
+      return new Response(JSON.stringify({ 
+        test: true,
+        message: 'Function is working',
+        userId: user.id 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
       // Test if auth.uid() works in RPC context
       const { data: testAuth, error: testAuthError } = await userSupabase
         .rpc('get_current_user_profile_secure');
