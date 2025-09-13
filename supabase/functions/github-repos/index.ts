@@ -283,20 +283,32 @@ serve(async (req) => {
     if (action === 'disconnectGitHub') {
       console.log('🔌 Disconnecting GitHub for user:', user.id);
       
-      // Remove GitHub connection data and token via secure RPC
-      const { error: updateError } = await userSupabase
-        .rpc('clear_github_connection');
+      try {
+        // Remove GitHub connection data and token via secure RPC
+        const { error: updateError } = await userSupabase
+          .rpc('clear_github_connection');
 
-      if (updateError) {
-        console.error('❌ Failed to disconnect GitHub:', updateError);
-        throw new Error(`Failed to disconnect GitHub: ${updateError.message}`);
+        if (updateError) {
+          console.error('❌ Failed to disconnect GitHub:', updateError);
+          console.error('❌ Full error details:', JSON.stringify(updateError, null, 2));
+          throw new Error(`Failed to disconnect GitHub: ${updateError.message}`);
+        }
+
+        console.log('✅ GitHub disconnected successfully');
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (err) {
+        console.error('💥 Disconnect error:', err);
+        return new Response(JSON.stringify({ 
+          error: 'Failed to disconnect GitHub',
+          details: err.message 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        });
       }
-
-      console.log('✅ GitHub disconnected successfully');
-
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
     }
 
     if (action === 'fetchRepoContents') {
