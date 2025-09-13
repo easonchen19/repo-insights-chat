@@ -338,7 +338,7 @@ const GitHubConnect = () => {
 
     try {
       const { data: profile, error } = await supabase
-        .from('profiles_secure')
+        .from('profiles_secure_data')
         .select('has_github_token, github_username, github_connected_at')
         .eq('id', user.id)
         .maybeSingle();
