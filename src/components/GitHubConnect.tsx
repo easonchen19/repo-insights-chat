@@ -497,6 +497,7 @@ const GitHubConnect = () => {
       setIsLoading(true);
       
       const authToken = (await supabase.auth.getSession()).data.session?.access_token;
+      console.log('🔐 Auth token available:', !!authToken, 'length:', authToken?.length);
       
       console.log('🔄 Calling fetchRepos function...');
       
@@ -509,7 +510,10 @@ const GitHubConnect = () => {
         }
       });
 
-      console.log('📡 Fetch repos response:', response);
+      console.log('📡 Full fetch repos response:', {
+        data: response.data,
+        error: response.error
+      });
 
       if (response.error) {
         console.error('❌ Fetch repos error:', response.error);
