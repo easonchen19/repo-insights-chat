@@ -77,6 +77,8 @@ serve(async (req) => {
     const { action, accessToken, repo_owner, repo_name, githubUserData } = await req.json();
     console.log('🎯 Action requested:', action);
     console.log('🎯 Request body parsed successfully');
+    console.log('🎯 Has accessToken:', !!accessToken);
+    console.log('🎯 GitHub user data keys:', githubUserData ? Object.keys(githubUserData) : 'none');
 
     if (action === 'saveGitHubConnection') {
       console.log('💾 Saving GitHub connection for user:', user.id);
