@@ -114,13 +114,6 @@ serve(async (req) => {
         testData: testAuth,
         testError: testAuthError?.message 
       });
-      const { data: testAuth, error: testAuthError } = await userSupabase
-        .rpc('get_current_user_profile_secure');
-      
-      console.log('🧪 Test auth context:', { 
-        testData: testAuth,
-        testError: testAuthError?.message 
-      });
       
       // Get GitHub access token from user profile using secure function
       console.log('🔍 About to call get_user_github_token RPC...');
