@@ -14,7 +14,6 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { SUBSCRIPTION_TIERS } from "@/lib/subscription";
 
 interface Repository {
   id: number;
@@ -339,7 +338,7 @@ const GitHubConnect = () => {
 
     try {
       const { data: profile, error } = await supabase
-        .from('profiles_secure_data')
+        .from('profiles_secure')
         .select('has_github_token, github_username, github_connected_at')
         .eq('id', user.id)
         .maybeSingle();
@@ -497,7 +496,6 @@ const GitHubConnect = () => {
       setIsLoading(true);
       
       const authToken = (await supabase.auth.getSession()).data.session?.access_token;
-      console.log('🔐 Auth token available:', !!authToken, 'length:', authToken?.length);
       
       console.log('🔄 Calling fetchRepos function...');
       
@@ -510,10 +508,7 @@ const GitHubConnect = () => {
         }
       });
 
-      console.log('📡 Full fetch repos response:', {
-        data: response.data,
-        error: response.error
-      });
+      console.log('📡 Fetch repos response:', response);
 
       if (response.error) {
         console.error('❌ Fetch repos error:', response.error);
@@ -1062,16 +1057,10 @@ const GitHubConnect = () => {
     }
   };
 
-  // Apply subscription-based filtering
-  const { subscription } = useAuth();
-  const maxProjects = subscription ? SUBSCRIPTION_TIERS[subscription.tier].features.projects : 1;
-  
-  const filteredRepos = repositories
-    .filter(repo =>
-      repo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repo.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .slice(0, maxProjects); // Limit based on subscription tier
+  const filteredRepos = repositories.filter(repo =>
+    repo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    repo.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (showAnalysis) {
     return (
@@ -1239,25 +1228,6 @@ const GitHubConnect = () => {
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10"
                     />
-                  </div>
-                </div>
-
-                {/* Subscription tier info */}
-                <div className="mb-4 p-4 bg-card/30 rounded-lg border">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Showing {filteredRepos.length} of {repositories.length} repositories 
-                      ({subscription?.tier || 'free'} tier: {maxProjects} max)
-                    </span>
-                    {repositories.length > maxProjects && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => navigate('/pricing')}
-                      >
-                        Upgrade for more repos
-                      </Button>
-                    )}
                   </div>
                 </div>
 

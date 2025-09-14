@@ -22,7 +22,7 @@ const Navigation = () => {
   const [isGitHubConnected, setIsGitHubConnected] = useState(false);
   const [githubUsername, setGithubUsername] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { user, subscription, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -171,16 +171,6 @@ const Navigation = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             <NavLink 
-              to="/pricing" 
-              className={({ isActive }) => 
-                `flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary ${
-                  isActive ? 'text-primary' : 'text-muted-foreground'
-                }`
-              }
-            >
-              Pricing
-            </NavLink>
-            <NavLink 
               to="/github" 
               className={({ isActive }) => 
                 `flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary ${
@@ -205,11 +195,6 @@ const Navigation = () => {
                     </Button>
                   </DropdownMenuTrigger>
                    <DropdownMenuContent>
-                     <DropdownMenuItem onClick={() => navigate('/pricing')}>
-                       <User className="w-4 h-4 mr-2" />
-                       {subscription?.tier ? `${subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1)} Plan` : 'Free Plan'}
-                     </DropdownMenuItem>
-                     <DropdownMenuSeparator />
                      <DropdownMenuItem onClick={handleSignOut}>
                        <LogOut className="w-4 h-4 mr-2" />
                        Sign Out
@@ -243,13 +228,6 @@ const Navigation = () => {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border/50">
             <div className="flex flex-col space-y-4">
-              <NavLink 
-                to="/pricing" 
-                className="text-sm font-medium"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Pricing
-              </NavLink>
               <NavLink 
                 to="/github" 
                 className="flex items-center gap-2 text-sm font-medium"
