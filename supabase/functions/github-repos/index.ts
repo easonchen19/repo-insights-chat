@@ -105,18 +105,15 @@ serve(async (req) => {
 
     if (action === 'fetchRepos') {
       console.log('📂 Starting fetchRepos action for user:', user.id);
-      console.log('🔍 Auth context - user email:', user.email);
       
-      // Add simple test response first to verify basic function works
-      console.log('🧪 Testing basic function response...');
-      return new Response(JSON.stringify({ 
-        test: true,
-        message: 'Function is working',
-        userId: user.id 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
       // Test if auth.uid() works in RPC context
+      const { data: testAuth, error: testAuthError } = await userSupabase
+        .rpc('get_current_user_profile_secure');
+      
+      console.log('🧪 Test auth context:', { 
+        testData: testAuth,
+        testError: testAuthError?.message 
+      });
       const { data: testAuth, error: testAuthError } = await userSupabase
         .rpc('get_current_user_profile_secure');
       
