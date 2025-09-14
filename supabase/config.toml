@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.analyze-github-code]
 verify_jwt = false
+
+[functions.github-repos]
+verify_jwt = true
