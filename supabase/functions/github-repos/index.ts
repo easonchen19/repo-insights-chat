@@ -28,6 +28,7 @@ serve(async (req) => {
 
   try {
     console.log('🔍 GitHub function called with method:', req.method);
+    console.log('🔍 Request URL:', req.url);
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -59,10 +60,23 @@ serve(async (req) => {
           'Authorization': `Bearer ${token}`,
         },
       },
+      auth: {
+        persistSession: false,
+      },
+    });
+
+    // Test the user context immediately
+    console.log('🧪 Testing user context with userSupabase...');
+    const { data: sessionTest, error: sessionError } = await userSupabase.auth.getUser();
+    console.log('🧪 Session test:', { 
+      hasUser: !!sessionTest?.user,
+      userId: sessionTest?.user?.id,
+      sessionError: sessionError?.message 
     });
 
     const { action, accessToken, repo_owner, repo_name, githubUserData } = await req.json();
     console.log('🎯 Action requested:', action);
+    console.log('🎯 Request body parsed successfully');
 
     if (action === 'saveGitHubConnection') {
       console.log('💾 Saving GitHub connection for user:', user.id);
@@ -90,11 +104,39 @@ serve(async (req) => {
     }
 
     if (action === 'fetchRepos') {
-      console.log('📂 Fetching repositories for user:', user.id);
+      console.log('📂 Starting fetchRepos action for user:', user.id);
+      console.log('🔍 Auth context - user email:', user.email);
+      
+      // Add simple test response first to verify basic function works
+      console.log('🧪 Testing basic function response...');
+      return new Response(JSON.stringify({ 
+        test: true,
+        message: 'Function is working',
+        userId: user.id 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+      // Test if auth.uid() works in RPC context
+      const { data: testAuth, error: testAuthError } = await userSupabase
+        .rpc('get_current_user_profile_secure');
+      
+      console.log('🧪 Test auth context:', { 
+        testData: testAuth,
+        testError: testAuthError?.message 
+      });
       
       // Get GitHub access token from user profile using secure function
+      console.log('🔍 About to call get_user_github_token RPC...');
       const { data: profile, error: profileError } = await userSupabase
         .rpc('get_user_github_token');
+
+      console.log('👤 Raw RPC response:', { 
+        data: profile,
+        error: profileError,
+        dataType: typeof profile,
+        isArray: Array.isArray(profile),
+        length: profile?.length
+      });
 
       console.log('👤 Profile query result:', { 
         hasProfile: !!profile?.[0], 
@@ -103,8 +145,64 @@ serve(async (req) => {
         error: profileError?.message 
       });
 
+      // If RPC fails, try direct query as fallback
       if (profileError || !profile?.[0]?.github_access_token) {
-        console.error('❌ No GitHub connection found:', profileError?.message);
+        console.log('🔄 RPC failed, trying direct token query...');
+        
+        // Try direct query to profiles and user_tokens
+        const { data: profileData, error: profileQueryError } = await userSupabase
+          .from('profiles')
+          .select('id, github_username, github_user_id, github_connected_at')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        const { data: tokenData, error: tokenQueryError } = await userSupabase
+          .from('user_tokens')
+          .select('encrypted_token')
+          .eq('user_id', user.id)
+          .eq('token_type', 'github_access_token')
+          .maybeSingle();
+
+        console.log('🔍 Direct query results:', {
+          profileData,
+          profileQueryError: profileQueryError?.message,
+          tokenData,
+          tokenQueryError: tokenQueryError?.message
+        });
+
+        if (profileQueryError || tokenQueryError || !tokenData?.encrypted_token) {
+          console.error('❌ No GitHub connection found:', profileQueryError?.message || tokenQueryError?.message);
+          throw new Error('GitHub account not connected. Please connect your GitHub account first.');
+        }
+
+        // Try to decrypt the token manually
+        const { data: decryptedToken, error: decryptError } = await userSupabase
+          .rpc('decrypt_github_token', { encrypted_token: tokenData.encrypted_token });
+
+        console.log('🔐 Manual decryption result:', {
+          hasDecryptedToken: !!decryptedToken,
+          decryptError: decryptError?.message
+        });
+
+        if (decryptError || !decryptedToken) {
+          console.error('❌ Token decryption failed:', decryptError?.message);
+          throw new Error('GitHub token decryption failed. Please reconnect your GitHub account.');
+        }
+
+        // Use manually retrieved data
+        profile = [{
+          id: profileData.id,
+          github_username: profileData.github_username,
+          github_user_id: profileData.github_user_id,
+          github_access_token: decryptedToken,
+          github_connected_at: profileData.github_connected_at,
+          created_at: null,
+          updated_at: null
+        }];
+      }
+
+      if (!profile?.[0]?.github_access_token) {
+        console.error('❌ No valid GitHub token found after all attempts');
         throw new Error('GitHub account not connected. Please connect your GitHub account first.');
       }
 
