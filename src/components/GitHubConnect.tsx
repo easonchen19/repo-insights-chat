@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { SUBSCRIPTION_TIERS } from "@/lib/subscription";
+import { TierBasedSelector } from "./TierBasedSelector";
 
 interface Repository {
   id: number;
@@ -56,6 +57,7 @@ const GitHubConnect = () => {
   const [featureInput, setFeatureInput] = useState('');
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [repoDisplayCount, setRepoDisplayCount] = useState(1);
   
   const copyToClipboard = async (text: string) => {
     try {
@@ -1066,12 +1068,13 @@ const GitHubConnect = () => {
   const { subscription } = useAuth();
   const maxProjects = subscription ? SUBSCRIPTION_TIERS[subscription.tier].features.projects : 1;
   
-  const filteredRepos = repositories
+  const searchFilteredRepos = repositories
     .filter(repo =>
       repo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       repo.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .slice(0, maxProjects); // Limit based on subscription tier
+    );
+  
+  const filteredRepos = searchFilteredRepos.slice(0, repoDisplayCount);
 
   if (showAnalysis) {
     return (
@@ -1230,7 +1233,7 @@ const GitHubConnect = () => {
 
             {repositories.length > 0 && (
               <>
-                <div className="mb-6">
+                <div className="mb-6 flex flex-col sm:flex-row gap-4">
                   <div className="relative max-w-md">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                     <Input
@@ -1240,16 +1243,26 @@ const GitHubConnect = () => {
                       className="pl-10"
                     />
                   </div>
+                  <TierBasedSelector 
+                    label="Repositories to display"
+                    onSelectionChange={setRepoDisplayCount}
+                    defaultValue={1}
+                  />
                 </div>
 
                 {/* Subscription tier info */}
                 <div className="mb-4 p-4 bg-card/30 rounded-lg border">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">
-                      Showing {filteredRepos.length} of {repositories.length} repositories 
-                      ({subscription?.tier || 'free'} tier: {maxProjects} max)
+                      Showing {filteredRepos.length} of {searchFilteredRepos.length} repositories 
+                      ({subscription?.tier || 'free'} tier: {maxProjects} max available)
                     </span>
-                    {repositories.length > maxProjects && (
+                    {repoDisplayCount < maxProjects && searchFilteredRepos.length > repoDisplayCount && (
+                      <span className="text-xs text-muted-foreground">
+                        {searchFilteredRepos.length - repoDisplayCount} more available
+                      </span>
+                    )}
+                    {maxProjects < searchFilteredRepos.length && (
                       <Button 
                         variant="outline" 
                         size="sm"
