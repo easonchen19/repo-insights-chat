@@ -386,6 +386,11 @@ const GitHubConnect = () => {
         if (response.data?.repositories) {
           console.log('✅ Repositories fetched:', response.data.repositories.length);
           setRepositories(response.data.repositories);
+          
+          // Auto-select all repositories up to the user's tier limit by default
+          const reposToSelect = response.data.repositories.slice(0, maxProjects);
+          const repoIds = reposToSelect.map((repo: Repository) => repo.id);
+          setSelectedRepositories(new Set(repoIds));
         }
       } catch (error: any) {
         console.error('💥 Error fetching repositories:', error);
