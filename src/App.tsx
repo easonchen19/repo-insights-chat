@@ -17,6 +17,7 @@ import NotFound from "./pages/NotFound";
 import Contact from "./pages/Contact";
 import Pricing from "./pages/Pricing";
 import Success from "./pages/Success";
+import Chat from "./pages/Chat";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/chat" element={<Chat />} />
               <Route path="/upload" element={<Upload />} />
               <Route path="/analyzer" element={<Analyzer />} />
               <Route path="/projects" element={<Projects />} />
