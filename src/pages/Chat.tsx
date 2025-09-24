@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useNavigate } from "react-router-dom";
+import RepoSelectionModal from "@/components/RepoSelectionModal";
 
 interface ChatMessage {
   id: string;
@@ -48,10 +49,31 @@ const Chat = () => {
   
   // UI state
   const [showSetup, setShowSetup] = useState(false);
+  const [showRepoSelection, setShowRepoSelection] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
     checkGitHubConnection();
+    
+    // Check for GitHub OAuth callback and show repo selection
+    const checkGitHubCallback = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const isLinkingGitHub = localStorage.getItem('linkingGitHub') === 'true';
+      
+      if (session?.provider_token && session?.user?.app_metadata?.provider === 'github') {
+        // Show repository selection after successful GitHub connection
+        setTimeout(() => {
+          setShowRepoSelection(true);
+        }, 1000);
+        
+        // Clean up
+        localStorage.removeItem('linkingGitHub');
+        localStorage.removeItem('originalUserId');
+        localStorage.removeItem('originalUserEmail');
+      }
+    };
+    
+    checkGitHubCallback();
   }, [user]);
 
   useEffect(() => {
@@ -77,34 +99,19 @@ const Chat = () => {
       if (!error && (profile as any)?.has_github_token) {
         setIsGitHubConnected(true);
         setGithubUsername((profile as any).github_username);
-        await fetchRepositories();
+        // Don't auto-fetch repositories, wait for user selection
       }
     } catch (error) {
       console.error('Error checking GitHub connection:', error);
     }
   };
 
-  const fetchRepositories = async () => {
-    try {
-      const authToken = (await supabase.auth.getSession()).data.session?.access_token;
-      
-      const response = await supabase.functions.invoke('github-repos', {
-        body: { action: 'fetchRepos' },
-        headers: {
-          Authorization: `Bearer ${authToken}`
-        }
-      });
-
-      if (response.data?.repositories) {
-        setRepositories(response.data.repositories);
-        // Auto-select first repo if none selected
-        if (!selectedRepo && response.data.repositories.length > 0) {
-          setSelectedRepo(response.data.repositories[0]);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching repositories:', error);
-    }
+  const handleRepoSelection = (repo: Repository) => {
+    setSelectedRepo(repo);
+    toast({
+      title: "Repository Selected",
+      description: `Now connected to ${repo.name}. You can start asking questions about your codebase.`,
+    });
   };
 
   const connectGitHub = async () => {
@@ -263,38 +270,29 @@ const Chat = () => {
                               Connected as {githubUsername}
                             </Badge>
                           </div>
-                          {repositories.length > 0 && (
-                            <div>
-                              <label className="text-sm font-medium mb-2 block">
-                                Select Repository:
-                              </label>
-                              <div className="space-y-2 max-h-32 overflow-y-auto">
-                                {repositories.map((repo) => (
-                                  <div
-                                    key={repo.id}
-                                    className={`p-2 rounded border cursor-pointer transition-colors ${
-                                      selectedRepo?.id === repo.id
-                                        ? 'border-primary bg-primary/10'
-                                        : 'border-border hover:border-primary/50'
-                                    }`}
-                                    onClick={() => setSelectedRepo(repo)}
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-sm font-medium">{repo.name}</span>
-                                      <Badge variant="outline" className="text-xs">
-                                        {repo.language}
-                                      </Badge>
-                                    </div>
-                                    {repo.description && (
-                                      <p className="text-xs text-muted-foreground mt-1">
-                                        {repo.description}
-                                      </p>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                           <div className="space-y-3">
+                             {selectedRepo ? (
+                               <div className="p-3 rounded-lg border bg-card">
+                                 <div className="flex items-center justify-between">
+                                   <div>
+                                     <p className="font-medium">{selectedRepo.name}</p>
+                                     <p className="text-sm text-muted-foreground">{selectedRepo.description}</p>
+                                   </div>
+                                   <Badge variant="outline">{selectedRepo.language}</Badge>
+                                 </div>
+                               </div>
+                             ) : (
+                               <p className="text-sm text-muted-foreground">No repository selected</p>
+                             )}
+                             <Button 
+                               onClick={() => setShowRepoSelection(true)}
+                               variant="outline"
+                               className="w-full"
+                             >
+                               <Github className="w-4 h-4 mr-2" />
+                               {selectedRepo ? "Change Repository" : "Select Repository"}
+                             </Button>
+                           </div>
                         </div>
                       ) : (
                         <Button 
@@ -440,6 +438,13 @@ const Chat = () => {
             </p>
           </div>
         </div>
+
+        {/* Repository Selection Modal */}
+        <RepoSelectionModal
+          isOpen={showRepoSelection}
+          onClose={() => setShowRepoSelection(false)}
+          onSelect={handleRepoSelection}
+        />
       </div>
     </ProtectedRoute>
   );
