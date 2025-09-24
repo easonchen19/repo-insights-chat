@@ -57,14 +57,42 @@ const Chat = () => {
     
     // Check for GitHub OAuth callback and show repo selection
     const checkGitHubCallback = async () => {
+      console.log('🔍 Checking for GitHub callback in Chat...');
       const { data: { session } } = await supabase.auth.getSession();
       const isLinkingGitHub = localStorage.getItem('linkingGitHub') === 'true';
       
+      console.log('📋 Session data:', {
+        hasSession: !!session,
+        hasProviderToken: !!session?.provider_token,
+        appProvider: session?.user?.app_metadata?.provider,
+        userMetadata: session?.user?.user_metadata,
+        isLinkingGitHub
+      });
+      
       if (session?.provider_token && session?.user?.app_metadata?.provider === 'github') {
-        // Show repository selection after successful GitHub connection
-        setTimeout(() => {
-          setShowRepoSelection(true);
-        }, 1000);
+        console.log('✅ Found GitHub provider token, saving connection...');
+        
+        try {
+          // Save the GitHub connection first
+          await saveGitHubConnection(session.provider_token, session.user?.user_metadata || {});
+          
+          // Then show repository selection after successful save
+          setTimeout(() => {
+            setShowRepoSelection(true);
+          }, 1000);
+          
+          toast({
+            title: "GitHub Connected!",
+            description: "Your GitHub account has been connected successfully.",
+          });
+        } catch (error: any) {
+          console.error('💥 Error saving GitHub connection:', error);
+          toast({
+            title: "Connection failed",
+            description: error.message || "Failed to save GitHub connection",
+            variant: "destructive"
+          });
+        }
         
         // Clean up
         localStorage.removeItem('linkingGitHub');
@@ -103,6 +131,58 @@ const Chat = () => {
       }
     } catch (error) {
       console.error('Error checking GitHub connection:', error);
+    }
+  };
+
+  const saveGitHubConnection = async (accessToken: string, userData: any) => {
+    if (!user) return;
+    
+    console.log('💾 Saving GitHub connection in Chat...', {
+      userId: user.id,
+      hasToken: !!accessToken,
+      userData: userData
+    });
+    
+    try {
+      const authToken = (await supabase.auth.getSession()).data.session?.access_token;
+      
+      const normalized = {
+        login: userData?.user_name || userData?.login || userData?.preferred_username || 'github-user',
+        id: (userData?.user_id || userData?.id || userData?.sub || '').toString(),
+      };
+      
+      console.log('🔄 Calling saveGitHubConnection function with:', normalized);
+      
+      const response = await supabase.functions.invoke('github-repos', {
+        body: {
+          action: 'saveGitHubConnection',
+          accessToken,
+          githubUserData: normalized,
+        },
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+      });
+
+      console.log('📡 Edge function response:', response);
+
+      if (response.error) {
+        console.error('❌ Edge function error:', response.error);
+        throw new Error(response.error.message || 'Edge function failed');
+      }
+
+      if (response.data?.error) {
+        console.error('❌ Edge function returned error:', response.data.error);
+        throw new Error(response.data.error);
+      }
+
+      console.log('✅ GitHub connection saved successfully');
+      
+      // Refresh connection status after saving
+      await checkGitHubConnection();
+    } catch (error: any) {
+      console.error('💥 Error saving GitHub connection:', error);
+      throw error;
     }
   };
 
