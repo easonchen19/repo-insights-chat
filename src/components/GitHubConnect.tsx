@@ -1,10 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Github, Search, Star, GitBranch, Calendar, ExternalLink, Copy, Lightbulb, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,8 +14,6 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { SUBSCRIPTION_TIERS } from "@/lib/subscription";
-import { TierBasedSelector } from "./TierBasedSelector";
 
 interface Repository {
   id: number;
@@ -57,10 +55,6 @@ const GitHubConnect = () => {
   const [featureInput, setFeatureInput] = useState('');
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [repoDisplayCount, setRepoDisplayCount] = useState(1);
-  const [showRepoSelectionModal, setShowRepoSelectionModal] = useState(false);
-  const [selectedRepositories, setSelectedRepositories] = useState<Set<number>>(new Set());
-  const [displayedRepositories, setDisplayedRepositories] = useState<Repository[]>([]);
   
   const copyToClipboard = async (text: string) => {
     try {
@@ -117,45 +111,152 @@ const GitHubConnect = () => {
     }
   };
 
-  // Apply subscription-based filtering
-  const { subscription } = useAuth();
-  const maxProjects = subscription ? SUBSCRIPTION_TIERS[subscription.tier].features.projects : 1;
-  
-  const searchFilteredRepos = displayedRepositories
-    .filter(repo =>
-      repo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repo.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  
-  const filteredRepos = searchFilteredRepos.slice(0, repoDisplayCount);
-
-  const handleRepositorySelection = (repoId: number, selected: boolean) => {
-    setSelectedRepositories(prev => {
-      const newSet = new Set(prev);
-      if (selected) {
-        newSet.add(repoId);
-      } else {
-        newSet.delete(repoId);
+  // Generate contextual prompts based on repository analysis
+  const generateContextualPrompts = (repo: any) => {
+    const language = repo.language?.toLowerCase() || 'javascript';
+    const repoName = repo.name;
+    const isWebApp = language.includes('javascript') || language.includes('typescript') || language.includes('react');
+    const isMobile = language.includes('swift') || language.includes('kotlin') || language.includes('dart');
+    const isBackend = language.includes('python') || language.includes('java') || language.includes('go') || language.includes('rust');
+    
+    const basePrompts = [
+      {
+        title: `Add Authentication to ${repoName}`,
+        prompt: `Analyze the ${repoName} codebase and implement a secure authentication system using the existing tech stack. Include login/signup forms that match the current design system, proper session management, and protect routes appropriately for this ${language} application.`
+      },
+      {
+        title: `Database Integration`,
+        prompt: `Review the ${repoName} project structure and add database functionality using the most appropriate database for this ${language} stack. Create models, migrations, and API endpoints that follow the existing code patterns and architecture.`
+      },
+      {
+        title: `Add Testing Suite`,
+        prompt: `Set up comprehensive testing for the ${repoName} project using ${language}-appropriate testing frameworks. Include unit tests, integration tests, and end-to-end tests that cover the main functionality.`
       }
-      return newSet;
-    });
-  };
+    ];
 
-  const handleSelectAllRepos = (checked: boolean) => {
-    if (checked) {
-      const allRepoIds = repositories.slice(0, maxProjects).map(repo => repo.id);
-      setSelectedRepositories(new Set(allRepoIds));
-    } else {
-      setSelectedRepositories(new Set());
+    // Add language-specific prompts
+    if (isWebApp) {
+      basePrompts.push(
+        {
+          title: "Mobile Responsive Optimization",
+          prompt: `Make the ${repoName} application fully mobile responsive. Analyze the current components and layouts, then optimize for mobile devices while maintaining the existing design system and user experience.`
+        },
+        {
+          title: "Add Real-time Features",
+          prompt: `Integrate WebSocket or real-time functionality into ${repoName} using appropriate libraries for the ${language} stack. Consider the current architecture and add real-time updates where they would enhance user experience.`
+        }
+      );
     }
+
+    if (isMobile) {
+      basePrompts.push(
+        {
+          title: "Push Notifications",
+          prompt: `Implement push notifications for the ${repoName} mobile app. Set up notification services, handle permissions, and create a notification management system that works with the current ${language} architecture.`
+        },
+        {
+          title: "Offline Mode Support",
+          prompt: `Add offline functionality to ${repoName}. Implement data caching, offline storage, and sync mechanisms that work seamlessly when the device reconnects to the internet.`
+        }
+      );
+    }
+
+    if (isBackend) {
+      basePrompts.push(
+        {
+          title: "API Rate Limiting",
+          prompt: `Add rate limiting and security middleware to the ${repoName} API. Implement request throttling, authentication middleware, and monitoring that integrates with the existing ${language} backend architecture.`
+        },
+        {
+          title: "Background Job Processing",
+          prompt: `Set up background job processing for ${repoName} using appropriate ${language} libraries. Add job queues, schedulers, and monitoring for long-running tasks.`
+        }
+      );
+    }
+
+    return basePrompts.slice(0, 6); // Return max 6 prompts
   };
 
-  const handleConfirmSelection = () => {
-    const selected = repositories.filter(repo => selectedRepositories.has(repo.id));
-    setDisplayedRepositories(selected);
-    setShowRepoSelectionModal(false);
-    setShowRepositories(true);
+  const getLanguageSpecificTips = (language: string) => {
+    const lang = language?.toLowerCase() || 'javascript';
+    
+    if (lang.includes('javascript') || lang.includes('typescript')) {
+      return [
+        "Reference existing React components and hooks in your prompts.",
+        "Mention TypeScript types and interfaces when applicable.",
+        "Include error boundaries and loading states in feature requests.",
+        "Specify responsive design requirements using the existing CSS framework."
+      ];
+    }
+    
+    if (lang.includes('python')) {
+      return [
+        "Mention Django/Flask patterns if using web frameworks.",
+        "Include proper error handling and logging in requests.",
+        "Specify database models and migrations needs.",
+        "Consider async/await patterns for performance."
+      ];
+    }
+    
+    if (lang.includes('swift')) {
+      return [
+        "Reference existing ViewControllers and Storyboards.",
+        "Include iOS design guidelines and accessibility.",
+        "Mention Core Data or SwiftUI patterns as appropriate.",
+        "Consider memory management and performance."
+      ];
+    }
+    
+    return [
+      "Be specific about the architecture and patterns you want to follow.",
+      "Include error handling, testing, and documentation requirements.",
+      "Mention performance and security considerations.",
+      "Reference existing code patterns and conventions in the repo."
+    ];
   };
+
+  const ghSamplePrompts: { title: string; prompt: string }[] = [
+    {
+      title: "Add Authentication System",
+      prompt:
+        "Implement a full email/password auth flow using Supabase: create /auth page with login + signup, persist sessions, redirect when logged in, protect private routes, add logout, handle errors, and include a simple profile section."
+    },
+    {
+      title: "Implement One-off Payments (Stripe)",
+      prompt:
+        "Integrate Stripe one-off payments using a Supabase Edge Function (mode: payment). Add a 'Buy' button that calls the function and redirects to Checkout. Include success/cancel pages and basic error handling."
+    },
+    {
+      title: "Onboard New Users",
+      prompt:
+        "Create a 3-step onboarding wizard (welcome, preferences, first action). Persist progress, allow skipping, show progress bar, mobile-friendly, and store settings to Supabase for the logged-in user."
+    },
+    {
+      title: "Add Header Navigation Menu",
+      prompt:
+        "Build a responsive header with brand logo, main nav links, a user menu (when signed in), and a hamburger menu for mobile. Include keyboard navigation, focus states, and match the app's design tokens."
+    },
+    {
+      title: "Add File Uploads",
+      prompt:
+        "Create drag-and-drop + browse file uploads with validation, progress bars, multiple files support, and previews for images. Show toasts for success/errors and keep the design consistent with the existing UI."
+    },
+    {
+      title: "Create Search + Filters",
+      prompt:
+        "Implement search with debounce and filters (checkboxes, select, date range). Show result count, clear filters, and maintain URL query params for shareable filtered views."
+    },
+    {
+      title: "Add Dark/Light Theme Toggle",
+      prompt:
+        "Add a theme toggle that persists user preference. Ensure all components look great in both themes using the existing design tokens and proper contrast."
+    },
+    {
+      title: "Improve Accessibility",
+      prompt:
+        "Audit and improve accessibility: aria labels, roles, keyboard navigation, focus outlines, proper color contrast, and semantic HTML across pages."
+    }
+  ];
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -237,7 +338,7 @@ const GitHubConnect = () => {
 
     try {
       const { data: profile, error } = await supabase
-        .from('profiles_secure_data')
+        .from('profiles_secure')
         .select('has_github_token, github_username, github_connected_at')
         .eq('id', user.id)
         .maybeSingle();
@@ -334,78 +435,160 @@ const GitHubConnect = () => {
       });
 
       if (error) {
+        console.error('❌ Migration error:', error);
         throw error;
       }
 
-      console.log('✅ User data migrated successfully');
+      console.log('✅ User data migration completed successfully');
     } catch (error: any) {
       console.error('💥 Error migrating user data:', error);
+      throw new Error(`Failed to migrate user data: ${error.message}`);
+    }
+  };
+
+  const saveGitHubConnectionToUser = async (userId: string, accessToken: string, userData: any) => {
+    console.log('🔗 Saving GitHub connection to specific user...', {
+      targetUserId: userId,
+      hasToken: !!accessToken,
+      userData: userData
+    });
+    
+    try {
+      const normalized = {
+        login: userData?.user_name || userData?.login || userData?.preferred_username || 'github-user',
+        id: (userData?.user_id || userData?.id || userData?.sub || '').toString(),
+      };
+      
+      // Store token securely using RPC and update non-sensitive profile data
+      const { error } = await supabase.rpc('update_github_token', {
+        user_id: userId,
+        new_token: accessToken,
+        github_user_data: normalized as any,
+      });
+
+      if (error) {
+        console.error('❌ Database error:', error);
+        throw error;
+      }
+
+      console.log('✅ GitHub connection saved to user profile');
+      
       toast({
-        title: "Migration failed",
-        description: error.message || "Failed to migrate your data",
+        title: "GitHub Connected!",
+        description: `Successfully linked GitHub account (@${normalized.login}) to your email account.`,
+      });
+    } catch (error: any) {
+      console.error('💥 Error saving GitHub connection to user:', error);
+      toast({
+        title: "Connection failed",
+        description: error.message || "Failed to link GitHub account",
         variant: "destructive"
       });
     }
   };
 
-  const handleShowRepositories = async () => {
-    if (!user || !isConnected) {
-      toast({
-        title: "Not connected",
-        description: "Please connect your GitHub account first",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (repositories.length === 0) {
+  const fetchRepositories = async () => {
+    if (!user) return;
+    
+    console.log('📂 Fetching repositories for user:', user.id);
+    
+    try {
       setIsLoading(true);
       
-      try {
-        const authToken = (await supabase.auth.getSession()).data.session?.access_token;
-        
-        const response = await supabase.functions.invoke('github-repos', {
-          body: { action: 'fetchRepos' },
-          headers: {
-            Authorization: `Bearer ${authToken}`
-          }
-        });
-
-        console.log('📡 Edge function response:', response);
-
-        if (response.error) {
-          console.error('❌ Edge function error:', response.error);
-          throw new Error(response.error.message || 'Edge function failed');
+      const authToken = (await supabase.auth.getSession()).data.session?.access_token;
+      
+      console.log('🔄 Calling fetchRepos function...');
+      
+      const response = await supabase.functions.invoke('github-repos', {
+        body: {
+          action: 'fetchRepos'
+        },
+        headers: {
+          Authorization: `Bearer ${authToken}`
         }
+      });
 
-        if (response.data?.error) {
-          console.error('❌ Edge function returned error:', response.data.error);
-          throw new Error(response.data.error);
-        }
+      console.log('📡 Fetch repos response:', response);
 
-        if (response.data?.repositories) {
-          console.log('✅ Repositories fetched:', response.data.repositories.length);
-          setRepositories(response.data.repositories);
-          
-          // Auto-select all repositories up to the user's tier limit by default
-          const reposToSelect = response.data.repositories.slice(0, maxProjects);
-          const repoIds = reposToSelect.map((repo: Repository) => repo.id);
-          setSelectedRepositories(new Set(repoIds));
-        }
-      } catch (error: any) {
-        console.error('💥 Error fetching repositories:', error);
-        toast({
-          title: "Failed to fetch repositories",
-          description: error.message || "Could not load your GitHub repositories",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
+      if (response.error) {
+        console.error('❌ Fetch repos error:', response.error);
+        throw new Error(response.error.message);
       }
+
+      if (response.data?.repositories) {
+        console.log('✅ Repositories loaded:', response.data.repositories.length);
+        setRepositories(response.data.repositories);
+        
+        // Show success message with GitHub username and repo count
+        const username = userInfo?.username || response.data.username || 'your GitHub account';
+        toast({
+          title: `Connected to ${username}!`,
+          description: `Successfully loaded ${response.data.repositories.length} repositories from your GitHub account.`,
+        });
+      }
+    } catch (error: any) {
+      console.error('💥 Error fetching repositories:', error);
+      
+      // Provide specific error messages based on the error type
+      let errorMessage = error.message || "Could not fetch GitHub repositories";
+      let errorTitle = "Failed to load repositories";
+      
+      if (error.message?.includes('GitHub account not connected')) {
+        errorTitle = "GitHub Connection Lost";
+        errorMessage = "Your GitHub connection has expired. Please reconnect your account.";
+        setIsConnected(false);
+        setUserInfo(null);
+      } else if (error.message?.includes('GitHub API error: 401')) {
+        errorTitle = "GitHub Token Expired";
+        errorMessage = "Your GitHub access token has expired. Please reconnect your account.";
+        setIsConnected(false);
+        setUserInfo(null);
+      }
+      
+      toast({
+        title: errorTitle,
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Open repository selection modal
-    setShowRepoSelectionModal(true);
+  };
+
+  const ensureTokenAndFetch = async () => {
+    if (!user) return;
+    try {
+      setIsLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔎 ensureTokenAndFetch check:', {
+        isConnected,
+        hasProviderToken: !!session?.provider_token,
+        provider: session?.user?.app_metadata?.provider
+      });
+
+      if (!isConnected && session?.provider_token && session?.user?.app_metadata?.provider === 'github') {
+        console.log('🔐 Provider token found in session; saving connection...');
+        await saveGitHubConnection(session.provider_token, session.user.user_metadata || {});
+        await fetchRepositories();
+        return;
+      }
+
+      if (isConnected) {
+        if (!showRepositories) {
+          setShowRepositories(true);
+          await fetchRepositories();
+        } else {
+          setShowRepositories(false);
+        }
+        return;
+      }
+
+      await handleConnect();
+    } catch (e) {
+      console.error('💥 ensureTokenAndFetch error:', e);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleConnect = async () => {
@@ -471,48 +654,60 @@ const GitHubConnect = () => {
     }
   };
 
-  const handleDisconnect = async () => {
-    console.log('🔌 Disconnecting GitHub...');
-    setIsLoading(true);
-    
+
+  const handleAnalyzeRepo = async (repo: Repository) => {
+    if (!user || !isConnected) {
+      toast({
+        title: "Not connected",
+        description: "Please connect your GitHub account first",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
+      setIsLoading(true);
+      
       const authToken = (await supabase.auth.getSession()).data.session?.access_token;
       
+      // Fetch repository contents
       const response = await supabase.functions.invoke('github-repos', {
-        body: { action: 'disconnectGitHub' },
+        body: {
+          action: 'fetchRepoContents',
+          repo_owner: repo.full_name.split('/')[0],
+          repo_name: repo.full_name.split('/')[1]
+        },
         headers: {
           Authorization: `Bearer ${authToken}`
         }
       });
 
-      console.log('📡 Disconnect response:', response);
-
       if (response.error) {
-        console.error('❌ Disconnect error:', response.error);
-        throw new Error(response.error.message || 'Disconnect failed');
+        throw new Error(response.error.message);
       }
 
-      if (response.data?.error) {
-        console.error('❌ Disconnect returned error:', response.data.error);
-        throw new Error(response.data.error);
+      if (response.data?.files) {
+        // Normalize files to always have a `path` field
+        const normalizedFiles = response.data.files.map((f: any) => ({
+          ...f,
+          path: typeof f?.path === 'string' ? f.path : f?.name || '',
+        })).filter((f: any) => f.path);
+
+        // Organize files by first-level folder structure for better display
+        const organizedFiles = organizeFilesByFolder(normalizedFiles);
+        setRepoFiles(organizedFiles);
+        setAllFiles(normalizedFiles);
+        setCurrentAnalysisRepo(repo);
+        // Select all files by default (only valid ones)
+        const allFilePaths = normalizedFiles.map((file: any) => file.path);
+        setSelectedFiles(new Set(allFilePaths));
+        setShowFileSelectionModal(true);
       }
-
-      console.log('✅ GitHub disconnected successfully');
-      setIsConnected(false);
-      setRepositories([]);
-      setDisplayedRepositories([]);
-      setShowRepositories(false);
-      setUserInfo(null);
-
-      toast({
-        title: "GitHub Disconnected",
-        description: "Your GitHub account has been disconnected successfully.",
-      });
     } catch (error: any) {
-      console.error('💥 Error disconnecting GitHub:', error);
+      console.error('Error analyzing repository:', error);
       toast({
-        title: "Disconnect failed",
-        description: error.message || "Failed to disconnect GitHub account",
+        title: "Analysis failed",
+        description: error.message || "Could not analyze repository",
         variant: "destructive"
       });
     } finally {
@@ -520,31 +715,477 @@ const GitHubConnect = () => {
     }
   };
 
+  // Helper function to organize files by folder structure (first level only)
+  const organizeFilesByFolder = (files: any[]) => {
+    const organized: { [key: string]: any[] } = {
+      'root': [] // Files in the root directory
+    };
+
+    files.forEach(file => {
+      // Skip files without a valid path
+      if (!file || !file.path || typeof file.path !== 'string') {
+        console.warn('Skipping file with invalid path:', file);
+        return;
+      }
+
+      const pathParts = file.path.split('/');
+      
+      if (pathParts.length === 1) {
+        // Root level file
+        organized.root.push(file);
+      } else {
+        // File in a folder
+        const folderName = pathParts[0];
+        if (!organized[folderName]) {
+          organized[folderName] = [];
+        }
+        organized[folderName].push(file);
+      }
+    });
+
+    return organized;
+  };
+
+  const handleFileSelection = (filePath: string, checked: boolean) => {
+    setSelectedFiles(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(filePath);
+      } else {
+        newSet.delete(filePath);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      // Filter out files without valid paths
+      const validFilePaths = allFiles
+        .filter(file => file && file.path && typeof file.path === 'string')
+        .map(file => file.path);
+      setSelectedFiles(new Set(validFilePaths));
+    } else {
+      setSelectedFiles(new Set());
+    }
+  };
+
+  const handleStartAnalysis = async () => {
+    if (selectedFiles.size === 0) {
+      toast({
+        title: "No files selected",
+        description: "Please select at least one file to analyze.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log("Starting analysis with selected files:", Array.from(selectedFiles));
+    
+    // Show modal immediately with loading state
+    setAnalysisResult("");
+    setShowAnalysisModal(true);
+    setShowFileSelectionModal(false);
+    setIsAnalyzing(true);
+
+    try {
+      // Get selected files content
+      const selectedFilesData = allFiles.filter(file => 
+        selectedFiles.has(file.path)
+      );
+
+      // Apply client-side limits to avoid oversized request payloads
+      const MAX_FILES = 40;
+      const MAX_CHARS_PER_FILE = 4000;
+      const TOTAL_CHAR_BUDGET = 120000;
+
+      let remaining = TOTAL_CHAR_BUDGET;
+      const payloadFiles = [] as any[];
+      for (const f of selectedFilesData.slice(0, MAX_FILES)) {
+        if (remaining <= 0) break;
+        const sliceLen = Math.min(MAX_CHARS_PER_FILE, Math.max(0, remaining));
+        const content = (f.content || '').slice(0, sliceLen);
+        if (!content) continue;
+        remaining -= content.length;
+        payloadFiles.push({ path: f.path || f.name, content, type: f.type });
+      }
+
+      if (payloadFiles.length === 0) {
+        throw new Error('Selected files are empty or too large to analyze. Try selecting fewer files.');
+      }
+
+      // Make streaming request to the edge function
+      const SUPABASE_URL = "https://wfywmkdqyuucxftpvmfj.supabase.co";
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/analyze-github-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          files: payloadFiles,
+          repoName: currentAnalysisRepo?.name
+        }),
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      }
+
+      // Handle streaming response
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.type === 'delta' && data.text) {
+                // Append text chunk to the analysis result
+                setAnalysisResult(prev => prev + data.text);
+              } else if (data.type === 'complete') {
+                setIsAnalyzing(false);
+                toast({
+                  title: "Analysis Complete",
+                  description: `Successfully analyzed ${selectedFiles.size} files from ${currentAnalysisRepo?.name}.`,
+                });
+              }
+            } catch (e) {
+              // Skip invalid JSON
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error("Analysis failed:", error);
+      toast({
+        title: "Analysis Failed",
+        description: error.message || "An error occurred during analysis.",
+        variant: "destructive",
+      });
+      setIsAnalyzing(false);
+    } finally {
+      // Keep context for the modal; cleanup happens when modal closes
+    }
+  };
+
+  const startAnalysis = async (files: any[]) => {
+    setIsAnalyzing(true);
+    setAnalysis("");
+
+    try {
+      const SUPABASE_URL = "https://wfywmkdqyuucxftpvmfj.supabase.co";
+      const authToken = (await supabase.auth.getSession()).data.session?.access_token;
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmeXdta2RxeXV1Y3hmdHB2bWZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NjkwNjEsImV4cCI6MjA3MTE0NTA2MX0.elHXCxBIqmz0IlcuOcKlY0gnIB88wK4rgbbpz9be244";
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/analyze-codebase`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken || SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          analysisId: `github-${currentRepo?.id}-${Date.now()}`,
+          files: files.map(file => ({
+            name: file.path,
+            content: file.content || '',
+            type: file.type || 'other'
+          })),
+          isDirectAnalysis: true
+        })
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error('Failed to start analysis');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.type === 'delta' && data.text) {
+                setAnalysis(prev => prev + data.text);
+              } else if (data.type === 'complete') {
+                setIsAnalyzing(false);
+                toast({
+                  title: "Analysis completed",
+                  description: `Successfully analyzed ${files.length} files.`,
+                });
+              }
+            } catch (e) {
+              // Skip invalid JSON
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Analysis failed:', error);
+      setIsAnalyzing(false);
+      toast({
+        title: "Analysis failed",
+        description: "There was an error analyzing your files. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatAnalysis = (text: string) => {
+    if (!text) return null;
+
+    const lines = text.split('\n');
+    const elements: React.ReactNode[] = [];
+    let currentIndex = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      if (line.startsWith('# ')) {
+        elements.push(
+          <h1 key={currentIndex++} className="text-2xl font-bold mt-6 mb-3 text-foreground">
+            {line.substring(2)}
+          </h1>
+        );
+      } else if (line.startsWith('## ')) {
+        elements.push(
+          <h2 key={currentIndex++} className="text-xl font-semibold mt-5 mb-2 text-foreground">
+            {line.substring(3)}
+          </h2>
+        );
+      } else if (line.startsWith('### ')) {
+        elements.push(
+          <h3 key={currentIndex++} className="text-lg font-medium mt-4 mb-2 text-foreground">
+            {line.substring(4)}
+          </h3>
+        );
+      } else if (line.startsWith('```')) {
+        let codeBlock = '';
+        i++;
+        while (i < lines.length && !lines[i].startsWith('```')) {
+          codeBlock += lines[i] + '\n';
+          i++;
+        }
+        elements.push(
+          <pre key={currentIndex++} className="bg-muted p-4 rounded-lg my-3 overflow-x-auto">
+            <code className="text-sm text-muted-foreground">{codeBlock}</code>
+          </pre>
+        );
+      } else if (line.startsWith('- ')) {
+        const listItems = [line];
+        while (i + 1 < lines.length && lines[i + 1].startsWith('- ')) {
+          i++;
+          listItems.push(lines[i]);
+        }
+        elements.push(
+          <ul key={currentIndex++} className="list-disc list-inside my-3 space-y-1">
+            {listItems.map((item, idx) => (
+              <li key={idx} className="text-muted-foreground">{item.substring(2)}</li>
+            ))}
+          </ul>
+        );
+      } else if (line.trim() !== '') {
+        const boldRegex = /\*\*(.*?)\*\*/g;
+        const parts = line.split(boldRegex);
+        const formattedLine = parts.map((part, idx) => 
+          idx % 2 === 1 ? <strong key={idx} className="font-semibold">{part}</strong> : part
+        );
+        
+        elements.push(
+          <p key={currentIndex++} className="mb-2 text-muted-foreground leading-relaxed">
+            {formattedLine}
+          </p>
+        );
+      }
+    }
+
+    return elements;
+  };
+
+  const handleDisconnect = async () => {
+    if (!user) return;
+    
+    try {
+      const authToken = (await supabase.auth.getSession()).data.session?.access_token;
+      
+      const response = await supabase.functions.invoke('github-repos', {
+        body: {
+          action: 'disconnectGitHub'
+        },
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      // Update local state
+      setIsConnected(false);
+      setGithubAccessToken(null);
+      setRepositories([]);
+      setUserInfo(null);
+      
+      toast({
+        title: "Disconnected",
+        description: "GitHub account disconnected successfully",
+      });
+    } catch (error: any) {
+      console.error('Error disconnecting GitHub:', error);
+      toast({
+        title: "Disconnect failed",
+        description: error.message || "Failed to disconnect GitHub account",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const filteredRepos = repositories.filter(repo =>
+    repo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    repo.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (showAnalysis) {
+    return (
+      <div className="min-h-screen pt-20 px-6">
+        <div className="max-w-full mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-2xl font-bold mb-1">
+                Analysis: {currentRepo?.name}
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                {currentRepo?.description}
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAnalysis(false)}
+            >
+              Back to Repositories
+            </Button>
+          </div>
+
+          <div className="flex gap-6 h-[calc(100vh-8rem)]">
+            {/* Left Panel - Files */}
+            <div className="w-1/3 bg-card/50 backdrop-blur-sm rounded-lg border p-4 overflow-y-auto">
+              <h3 className="font-semibold mb-4 text-sm uppercase tracking-wide text-muted-foreground">
+                Repository Files ({analyzedFiles.length})
+              </h3>
+              <div className="space-y-2">
+                {analyzedFiles.map((file, index) => (
+                  <div 
+                    key={index}
+                    className="p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                  >
+                    <div className="text-sm font-medium truncate">{file.path}</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {file.type} • {file.content ? `${file.content.length} chars` : 'Empty'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Panel - Analysis */}
+            <div className="flex-1 bg-card/50 backdrop-blur-sm rounded-lg border p-6 overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
+                  Analysis Report
+                </h3>
+                {isAnalyzing && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                    Analyzing...
+                  </div>
+                )}
+              </div>
+
+              {analysis ? (
+                <div className="prose prose-sm max-w-none">
+                  {formatAnalysis(analysis)}
+                </div>
+              ) : isAnalyzing ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Analyzing repository files...</p>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No analysis available</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pt-20 px-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent">
               GitHub Integration
             </h1>
             <p className="text-muted-foreground">
-              {isConnected ? `Connected as ${userInfo?.username || 'GitHub User'}` : 'Connect your GitHub account to access repositories'}
+              Connect and manage your GitHub repositories
             </p>
           </div>
-          
-          <div className="flex gap-3">
+        </div>
+
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center text-sm text-muted-foreground">
+            <Github className="w-4 h-4 mr-2" />
+            {isConnected ? `Connected as ${userInfo?.username || 'GitHub User'}` : 'GitHub Integration'}
+          </div>
+          <div className="flex gap-2">
+            {isConnected && userInfo?.username && (
+              <Button variant="outline" size="sm" asChild>
+                <a 
+                  href={`https://github.com/${userInfo.username}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View GitHub Profile
+                </a>
+              </Button>
+            )}
             <Button 
-              onClick={isConnected ? handleShowRepositories : handleConnect}
+              variant="hero" 
+              onClick={ensureTokenAndFetch}
               disabled={isLoading}
-              className="relative"
             >
               {isLoading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  {isConnected ? 'Loading...' : 'Connecting...'}
+                </div>
               ) : (
                 <>
                   <Github className="w-4 h-4 mr-2" />
-                  {isConnected ? 'Show Repo' : 'Connect GitHub'}
+                  {isConnected ? (showRepositories ? 'Hide Repo' : 'Show Repo') : 'Connect GitHub'}
                 </>
               )}
             </Button>
@@ -573,190 +1214,207 @@ const GitHubConnect = () => {
           </Card>
         )}
 
-        {isConnected && showRepositories && displayedRepositories.length > 0 && (
+        {isConnected && showRepositories && (
           <div>
-            <div className="mb-6 flex flex-col sm:flex-row gap-4">
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  placeholder="Search repositories..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <TierBasedSelector 
-                label="Repositories to display"
-                onSelectionChange={setRepoDisplayCount}
-                defaultValue={1}
-              />
-            </div>
 
-            {/* Subscription tier info */}
-            <div className="mb-4 p-4 bg-card/30 rounded-lg border">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  Showing {filteredRepos.length} of {displayedRepositories.length} selected repositories 
-                  ({subscription?.tier || 'free'} tier: {maxProjects} max available)
-                </span>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowRepoSelectionModal(true)}
-                >
-                  Change Selection
-                </Button>
-              </div>
-            </div>
+            {repositories.length > 0 && (
+              <>
+                <div className="mb-6">
+                  <div className="relative max-w-md">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="Search repositories..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
 
-            <div className="grid gap-4">
-              {filteredRepos.map((repo) => (
-                <Card 
-                  key={repo.id} 
-                  className="p-6 hover:shadow-elegant transition-all duration-300 bg-card/50 backdrop-blur-sm"
-                >
-                  <div className="flex items-start justify-between flex-wrap gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-semibold flex items-center">
-                          {repo.name}
-                          {repo.private && (
-                            <span className="ml-2 text-xs bg-muted px-2 py-1 rounded">
-                              Private
-                            </span>
-                          )}
-                        </h3>
-                        <Button variant="ghost" size="sm">
-                          <ExternalLink className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      
-                      <p className="text-muted-foreground mb-4">
-                        {repo.description}
-                      </p>
-                      
-                      <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                        <div className="flex items-center">
-                          <div className="w-3 h-3 rounded-full bg-accent mr-2"></div>
-                          {repo.language}
+                <div className="grid gap-4">
+                  {filteredRepos.map((repo) => (
+                    <Card 
+                      key={repo.id} 
+                      className="p-6 hover:shadow-elegant transition-all duration-300 bg-card/50 backdrop-blur-sm"
+                    >
+                      <div className="flex items-start justify-between flex-wrap gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-xl font-semibold flex items-center">
+                              {repo.name}
+                              {repo.private && (
+                                <span className="ml-2 text-xs bg-muted px-2 py-1 rounded">
+                                  Private
+                                </span>
+                              )}
+                            </h3>
+                            <Button variant="ghost" size="sm">
+                              <ExternalLink className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          
+                          <p className="text-muted-foreground mb-4">
+                            {repo.description}
+                          </p>
+                          
+                          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                            <div className="flex items-center">
+                              <div className="w-3 h-3 rounded-full bg-accent mr-2"></div>
+                              {repo.language}
+                            </div>
+                            <div className="flex items-center">
+                              <Star className="w-4 h-4 mr-1" />
+                              {repo.stars}
+                            </div>
+                            <div className="flex items-center">
+                              <Calendar className="w-4 h-4 mr-1" />
+                              Updated {repo.updatedAt}
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center">
-                          <Star className="w-4 h-4 mr-1" />
-                          {repo.stars}
-                        </div>
-                        <div className="flex items-center">
-                          <Calendar className="w-4 h-4 mr-1" />
-                          Updated {repo.updatedAt}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2 flex-wrap justify-end">
-                      <Button variant="outline">
-                        <GitBranch className="w-4 h-4 mr-2" />
-                        Branches
-                      </Button>
-                      <Button 
-                        variant="hero"
-                        onClick={() => {/* handleAnalyzeRepo(repo) */}}
-                      >
-                        Analyze Code
-                      </Button>
-                      
-                      <Dialog>
-                        <DialogTrigger asChild>
+                        
+                        <div className="flex gap-2 flex-wrap justify-end">
                           <Button variant="outline">
-                            <Lightbulb className="w-4 h-4 mr-2" />
-                            Prompt Strategy
+                            <GitBranch className="w-4 h-4 mr-2" />
+                            Branches
                           </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[80vh] bg-background z-50">
-                          <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                              <Lightbulb className="w-5 h-5 text-primary" />
-                              AI Prompt Strategy for {repo.name}
-                            </DialogTitle>
-                            <DialogDescription>
-                              Generate optimized prompts for your {repo.language} codebase
-                            </DialogDescription>
-                          </DialogHeader>
-                          <ScrollArea className="max-h-[60vh]">
-                            <div className="space-y-6">
-                              {/* Feature Input Section */}
-                              <div className="space-y-3">
-                                <Label htmlFor="feature-input" className="text-sm font-semibold">
-                                  Describe the feature you want to implement:
-                                </Label>
-                                <Textarea
-                                  id="feature-input"
-                                  placeholder="e.g., Add user authentication with login/logout functionality"
-                                  value={featureInput}
-                                  onChange={(e) => setFeatureInput(e.target.value)}
-                                  className="min-h-[80px]"
-                                />
-                                <Button
-                                  onClick={() => generatePrompt(repo)}
-                                  disabled={isGenerating || !featureInput.trim()}
-                                  className="w-full"
-                                >
-                                  {isGenerating ? (
+                          <Button 
+                            variant="hero"
+                            onClick={() => handleAnalyzeRepo(repo)}
+                          >
+                            Analyze Code
+                          </Button>
+                          
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="outline">
+                                <Lightbulb className="w-4 h-4 mr-2" />
+                                Prompt Strategy
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-4xl max-h-[80vh]">
+                              <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                  <Lightbulb className="w-5 h-5 text-primary" />
+                                  AI Prompt Strategy for {repo.name}
+                                </DialogTitle>
+                                <DialogDescription>
+                                  Generate optimized prompts for your {repo.language} codebase
+                                </DialogDescription>
+                              </DialogHeader>
+                              <ScrollArea className="max-h-[60vh]">
+                                <div className="space-y-6">
+                                  {/* Feature Input Section */}
+                                  <div className="space-y-3">
+                                    <Label htmlFor="feature-input" className="text-sm font-semibold">
+                                      Describe the feature you want to implement:
+                                    </Label>
+                                    <Textarea
+                                      id="feature-input"
+                                      placeholder="e.g., Add user authentication with login/logout functionality"
+                                      value={featureInput}
+                                      onChange={(e) => setFeatureInput(e.target.value)}
+                                      className="min-h-[80px]"
+                                    />
+                                    <Button
+                                      onClick={() => generatePrompt(repo)}
+                                      disabled={isGenerating || !featureInput.trim()}
+                                      className="w-full"
+                                    >
+                                      {isGenerating ? (
+                                        <>
+                                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                          Generating...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Send className="h-4 w-4 mr-2" />
+                                          Generate Optimized Prompt
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
+
+                                  {/* Generated Prompt Section */}
+                                  {generatedPrompt && (
                                     <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Generating...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Send className="h-4 w-4 mr-2" />
-                                      Generate Optimized Prompt
+                                      <Separator />
+                                      <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                          <h4 className="font-semibold text-sm">Generated Prompt</h4>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => copyToClipboard(generatedPrompt)}
+                                            className="h-8"
+                                          >
+                                            <Copy className="h-4 w-4 mr-1" />
+                                            Copy
+                                          </Button>
+                                        </div>
+                                        <div className="text-sm bg-muted p-4 rounded-md whitespace-pre-wrap">
+                                          {generatedPrompt}
+                                        </div>
+                                      </div>
                                     </>
                                   )}
-                                </Button>
-                              </div>
-
-                              {/* Generated Prompt Section */}
-                              {generatedPrompt && (
-                                <>
+                                  
                                   <Separator />
-                                  <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                      <h4 className="font-semibold text-sm">Generated Prompt</h4>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => copyToClipboard(generatedPrompt)}
-                                        className="h-8"
-                                      >
-                                        <Copy className="h-4 w-4 mr-1" />
-                                        Copy
-                                      </Button>
-                                    </div>
-                                    <div className="text-sm bg-muted p-4 rounded-md whitespace-pre-wrap">
-                                      {generatedPrompt}
+                                  
+                                  {/* Predefined Prompts */}
+                                  <div className="space-y-4">
+                                    <h4 className="font-semibold text-sm">Quick Start Prompts</h4>
+                                    <div className="grid gap-3">
+                                      {generateContextualPrompts(repo).map((s, i) => (
+                                        <div key={i} className="border border-border rounded-lg p-4">
+                                          <div className="flex items-start justify-between mb-2">
+                                            <h5 className="font-medium text-foreground">{s.title}</h5>
+                                            <Button variant="ghost" size="sm" className="text-xs" onClick={() => copyToClipboard(s.prompt)}>
+                                              <Copy className="w-3 h-3 mr-1" /> Copy
+                                            </Button>
+                                          </div>
+                                          <p className="text-sm text-muted-foreground leading-relaxed">{s.prompt}</p>
+                                        </div>
+                                      ))}
                                     </div>
                                   </div>
-                                </>
-                              )}
-                            </div>
-                          </ScrollArea>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+                                  
+                                  <Separator />
+                                  
+                                  <div className="space-y-3">
+                                    <h4 className="font-semibold text-sm">Pro Tips for {repo.language}</h4>
+                                    <ul className="text-sm text-muted-foreground space-y-2">
+                                      {getLanguageSpecificTips(repo.language).map((tip, i) => (
+                                        <li key={i} className="flex items-start gap-2">
+                                          <span className="text-primary font-bold mt-1">•</span>
+                                          {tip}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                </div>
+                              </ScrollArea>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            )}
 
-            {filteredRepos.length === 0 && displayedRepositories.length === 0 && !isLoading && (
+            {repositories.length === 0 && !isLoading && isConnected && (
               <Card className="p-12 text-center">
                 <Github className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No repositories selected</h3>
+                <h3 className="text-lg font-semibold mb-2">No repositories loaded</h3>
                 <p className="text-muted-foreground mb-4">
-                  Click "Show Repo" to select repositories to display
+                  Click "Show GitHub Repos" to load your accessible repositories
                 </p>
               </Card>
             )}
 
-            {filteredRepos.length === 0 && searchTerm && displayedRepositories.length > 0 && !isLoading && (
+            {filteredRepos.length === 0 && searchTerm && repositories.length > 0 && !isLoading && (
               <Card className="p-12 text-center">
                 <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No repositories found</h3>
@@ -767,108 +1425,127 @@ const GitHubConnect = () => {
             )}
           </div>
         )}
-
-        {/* Repository Selection Modal */}
-        <Dialog open={showRepoSelectionModal} onOpenChange={setShowRepoSelectionModal}>
-          <DialogContent className="max-w-4xl max-h-[80vh] bg-background border z-50">
+        
+        {/* File Selection Modal */}
+        <Dialog open={showFileSelectionModal} onOpenChange={setShowFileSelectionModal}>
+          <DialogContent className="max-w-4xl max-h-[80vh]">
             <DialogHeader>
-              <DialogTitle>Select Repositories to Display</DialogTitle>
-              <DialogDescription>
-                Choose up to {maxProjects} repositories from your GitHub account ({subscription?.tier || 'free'} tier)
-              </DialogDescription>
+              <DialogTitle>Select Files to Analyze - {currentAnalysisRepo?.name}</DialogTitle>
             </DialogHeader>
             
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+            <div className="flex flex-col h-[60vh]">
+              {/* Select All Controls */}
+              <div className="flex items-center justify-between mb-4 p-3 bg-muted/50 rounded-lg">
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="select-all-repos"
-                    checked={selectedRepositories.size > 0 && selectedRepositories.size === Math.min(repositories.length, maxProjects)}
-                    onCheckedChange={handleSelectAllRepos}
+                    id="select-all"
+                    checked={selectedFiles.size === allFiles.length && allFiles.length > 0}
+                    onCheckedChange={handleSelectAll}
                   />
-                  <Label htmlFor="select-all-repos" className="text-sm font-medium">
-                    Select All (up to {maxProjects})
-                  </Label>
+                  <label htmlFor="select-all" className="font-medium">
+                    Select All ({selectedFiles.size}/{allFiles.length} files selected)
+                  </label>
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {selectedRepositories.size} of {maxProjects} selected
+                  {allFiles.length} files found
                 </div>
               </div>
-              
-              <ScrollArea className="h-[400px] border rounded-md p-4 bg-card/50">
-                <div className="space-y-3">
-                  {repositories.slice(0, maxProjects).map((repo) => (
-                    <div
-                      key={repo.id}
-                      className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <Checkbox
-                        id={`repo-${repo.id}`}
-                        checked={selectedRepositories.has(repo.id)}
-                        onCheckedChange={(checked) => handleRepositorySelection(repo.id, checked as boolean)}
-                      />
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Label
-                            htmlFor={`repo-${repo.id}`}
-                            className="text-sm font-medium cursor-pointer"
-                          >
-                            {repo.name}
-                          </Label>
-                          {repo.private && (
-                            <Badge variant="secondary" className="text-xs">Private</Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {repo.description || 'No description'}
-                        </p>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span className="flex items-center">
-                            <div className="w-2 h-2 rounded-full bg-accent mr-1"></div>
-                            {repo.language || 'Unknown'}
-                          </span>
-                          <span className="flex items-center">
-                            <Star className="w-3 h-3 mr-1" />
-                            {repo.stars}
-                          </span>
+
+              {/* File List with Folder Structure */}
+              <div className="flex-1 overflow-y-auto border rounded-lg p-4 space-y-4">
+                {Object.entries(repoFiles).map(([folderName, files]) => (
+                  <div key={folderName} className="space-y-2">
+                    {/* Folder Header */}
+                    <div className="text-sm font-semibold text-muted-foreground bg-muted/30 px-2 py-1 rounded">
+                      📁 {folderName === 'root' ? '(Root Directory)' : folderName} ({files.length} files)
+                    </div>
+                    
+                    {/* Files in Folder */}
+                    {files.map((file, index) => (
+                      <div 
+                        key={`${folderName}-${index}`}
+                        className="flex items-center space-x-3 p-2 ml-4 hover:bg-muted/50 rounded transition-colors"
+                      >
+                        <Checkbox
+                          id={`file-${folderName}-${index}`}
+                          checked={selectedFiles.has(file.path)}
+                          onCheckedChange={(checked) => handleFileSelection(file.path, checked as boolean)}
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium truncate">
+                            {folderName === 'root' ? file.path : file.path.split('/').slice(1).join('/')}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {file.type} • {file.content ? `${file.content.length} chars` : 'Empty'}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-              
-              {repositories.length > maxProjects && (
-                <div className="p-3 bg-muted/30 rounded-lg border border-primary/20">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      {repositories.length - maxProjects} more repositories available
-                    </span>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => navigate('/pricing')}
-                    >
-                      Upgrade Plan
-                    </Button>
+                    ))}
                   </div>
-                </div>
-              )}
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowRepoSelectionModal(false)}
+                ))}
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowFileSelectionModal(false)}
                 >
                   Cancel
                 </Button>
-                <Button
-                  onClick={handleConfirmSelection}
-                  disabled={selectedRepositories.size === 0}
+                <Button 
+                  variant="hero"
+                  onClick={handleStartAnalysis}
+                  disabled={selectedFiles.size === 0}
                 >
-                  Show Selected ({selectedRepositories.size})
+                  Start Analysis ({selectedFiles.size} files)
                 </Button>
               </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Analysis Results Modal */}
+        <Dialog open={showAnalysisModal} onOpenChange={(open) => {
+          setShowAnalysisModal(open);
+          if (!open) {
+            // Reset states when modal closes
+            setSelectedFiles(new Set());
+            setRepoFiles({});
+            setAllFiles([]);
+            setCurrentAnalysisRepo(null);
+            setAnalysisResult("");
+            setIsAnalyzing(false);
+          }
+        }}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                Analysis Report - {currentAnalysisRepo?.name}
+                {isAnalyzing && (
+                  <div className="flex items-center text-sm text-muted-foreground ml-auto">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                    Analyzing...
+                  </div>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              {analysisResult ? (
+                <div className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg">
+                  {formatAnalysis(analysisResult)}
+                </div>
+              ) : isAnalyzing ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Analyzing your code...</p>
+                  <p className="text-sm text-muted-foreground mt-2">This may take a few moments</p>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No analysis available</p>
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>

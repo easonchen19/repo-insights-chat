@@ -66,14 +66,31 @@ const Hero = () => {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
-          <Button 
-            variant="default" 
-            size="lg" 
-            asChild 
-            className="bg-gradient-primary hover:shadow-neon transition-all duration-500 text-lg px-8 py-4 h-auto"
-          >
-            <NavLink to="/auth">Get Started</NavLink>
-          </Button>
+          {user ? (
+            <>
+              <UploadButton variant="hero" size="lg" className="text-lg px-8 py-4 h-auto w-48" />
+              <Button 
+                variant="hero" 
+                size="lg" 
+                asChild 
+                className="text-lg px-8 py-4 h-auto w-48"
+              >
+                <NavLink to="/github">
+                  <Github className="w-5 h-5 mr-2" />
+                  Git Connect
+                </NavLink>
+              </Button>
+            </>
+          ) : (
+            <Button 
+              variant="default" 
+              size="lg" 
+              asChild 
+              className="bg-gradient-primary hover:shadow-neon transition-all duration-500 text-lg px-8 py-4 h-auto"
+            >
+              <NavLink to="/auth">Get Started</NavLink>
+            </Button>
+          )}
         </div>
         
         {/* High-Tech Feature Cards */}

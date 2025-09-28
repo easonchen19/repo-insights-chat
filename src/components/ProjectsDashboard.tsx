@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Calendar, Download, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import AnalysisReport from "./AnalysisReport";
-import { TierBasedSelector } from "./TierBasedSelector";
 
 interface Project {
   id: string;
@@ -30,7 +29,6 @@ const ProjectsDashboard = () => {
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
-  const [displayCount, setDisplayCount] = useState(1);
 
   useEffect(() => {
     fetchProjects();
@@ -109,11 +107,6 @@ const ProjectsDashboard = () => {
             Manage your uploaded projects and view AI-powered analysis reports
           </p>
         </div>
-        <TierBasedSelector 
-          label="Projects to display"
-          onSelectionChange={setDisplayCount}
-          defaultValue={1}
-        />
       </div>
 
       <Tabs defaultValue="projects" className="space-y-4">
@@ -135,7 +128,7 @@ const ProjectsDashboard = () => {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {projects.slice(0, displayCount).map((project) => {
+              {projects.map((project) => {
                 const analysis = getAnalysisForProject(project.id);
                 return (
                   <Card key={project.id} className="cursor-pointer hover:shadow-md transition-shadow">
@@ -192,7 +185,7 @@ const ProjectsDashboard = () => {
             </Card>
           ) : (
             <div className="space-y-4">
-              {analyses.slice(0, displayCount).map((analysis) => {
+              {analyses.map((analysis) => {
                 const project = projects.find(p => p.id === analysis.project_id);
                 return (
                   <Card key={analysis.id}>

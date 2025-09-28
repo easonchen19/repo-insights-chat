@@ -2,15 +2,12 @@ import React, { useState, useEffect, createContext, useContext } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { SubscriptionStatus } from "@/lib/subscription";
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  subscription: SubscriptionStatus | null;
   signOut: () => Promise<void>;
-  checkSubscription: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,29 +16,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const { toast } = useToast();
-
-  const checkSubscription = async () => {
-    if (!session) {
-      setSubscription({ subscribed: false, tier: 'free', product_id: null, subscription_end: null });
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase.functions.invoke('check-subscription', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error) throw error;
-      setSubscription(data);
-    } catch (error) {
-      console.error('Error checking subscription:', error);
-      setSubscription({ subscribed: false, tier: 'free', product_id: null, subscription_end: null });
-    }
-  };
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -51,15 +26,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
-
-        // Check subscription when auth state changes
-        if (session?.user) {
-          setTimeout(() => {
-            checkSubscription();
-          }, 0);
-        } else {
-          setSubscription(null);
-        }
 
         // Show welcome message for GitHub sign-in
         if (event === 'SIGNED_IN' && session?.user && !previousUser) {
@@ -96,12 +62,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      
-      if (session?.user) {
-        setTimeout(() => {
-          checkSubscription();
-        }, 0);
-      }
     });
 
     return () => subscription.unsubscribe();
@@ -109,11 +69,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setSubscription(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, subscription, signOut, checkSubscription }}>
+    <AuthContext.Provider value={{ user, session, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
