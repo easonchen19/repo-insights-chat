@@ -214,6 +214,10 @@ export type Database = {
         Args: { encrypted_token: string }
         Returns: string
       }
+      decrypt_github_token_for_user: {
+        Args: { encrypted_token: string; user_id_param: string }
+        Returns: string
+      }
       encrypt_github_token: {
         Args: { token: string }
         Returns: string
