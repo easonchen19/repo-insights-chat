@@ -290,7 +290,6 @@ ${getValidationSteps(userTask, language)}
 
     return basePrompts.slice(0, 6); // Return max 6 prompts
   };
-  };
 
   const getLanguageSpecificTips = (language: string) => {
     const lang = language?.toLowerCase() || 'javascript';
