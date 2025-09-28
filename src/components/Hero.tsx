@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import UploadButton from "@/components/UploadButton";
-import WorkflowCircle from "@/components/WorkflowCircle";
+
 import { useEffect, useState } from "react";
 import lovableMateLogoUrl from "@/assets/lovable-mate-heart-logo.png";
 
@@ -143,17 +143,8 @@ const Hero = () => {
         </div>
       </div>
       
-      {/* Continuous Development Loop Section */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 mt-20">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-vibe bg-clip-text text-transparent">
-            How does Lovable Mate work?
-          </h2>
-        </div>
-        
-        <WorkflowCircle />
-        
-        {/* Connect Git CTA */}
+      {/* Connect Git CTA */}
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-6">
         <div className="text-center mt-20 mb-20">
           <div className="mb-8">
             <h3 className="text-3xl md:text-4xl font-bold mb-6 bg-gradient-vibe bg-clip-text text-transparent">
