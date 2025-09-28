@@ -72,7 +72,7 @@ serve(async (req) => {
       // Save GitHub connection data to user profile using secure function
       const { error: updateError } = await userSupabase
         .rpc('update_github_token', {
-          user_id: user.id,
+          user_id_param: user.id,
           new_token: accessToken,
           github_user_data: githubUserData
         });

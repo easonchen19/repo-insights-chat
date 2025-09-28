@@ -461,7 +461,7 @@ const GitHubConnect = () => {
       
       // Store token securely using RPC and update non-sensitive profile data
       const { error } = await supabase.rpc('update_github_token', {
-        user_id: userId,
+        user_id_param: userId,
         new_token: accessToken,
         github_user_data: normalized as any,
       });
