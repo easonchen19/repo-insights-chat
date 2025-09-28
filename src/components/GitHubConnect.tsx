@@ -59,6 +59,7 @@ const GitHubConnect = () => {
   const [featureInput, setFeatureInput] = useState('');
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [contextualPrompts, setContextualPrompts] = useState<{title: string; prompt: string}[]>([]);
   
   const copyToClipboard = async (text: string) => {
     try {
@@ -66,6 +67,17 @@ const GitHubConnect = () => {
       toast({ title: "Copied to clipboard", description: "Prompt copied successfully!" });
     } catch (err) {
       toast({ title: "Copy failed", description: "Please copy manually.", variant: "destructive" });
+    }
+  };
+
+  // Load contextual prompts for a repository
+  const loadContextualPrompts = async (repo: Repository) => {
+    try {
+      const prompts = await generateContextualPrompts(repo);
+      setContextualPrompts(prompts);
+    } catch (error) {
+      console.error('Error loading contextual prompts:', error);
+      setContextualPrompts([]);
     }
   };
 
@@ -81,8 +93,8 @@ const GitHubConnect = () => {
 
     setIsGenerating(true);
     try {
-      // Use the new structured template instead of calling the edge function
-      const structuredPrompt = generateStructuredPrompt(repo, featureInput);
+      // Use the new structured template with real repo analysis
+      const structuredPrompt = await generateStructuredPrompt(repo, featureInput);
       setGeneratedPrompt(structuredPrompt);
       
       toast({
@@ -102,131 +114,325 @@ const GitHubConnect = () => {
   };
 
   // Generate structured prompts using the comprehensive template
-  const generateStructuredPrompt = (repo: any, userTask: string) => {
+  const generateStructuredPrompt = async (repo: any, userTask: string) => {
     const language = repo.language?.toLowerCase() || 'javascript';
     const repoName = repo.name;
     const description = repo.description || 'No description available';
     
-    // Generate repository file tree structure (simplified)
-    const fileTreeStructure = `
-${repoName}/
+    // Fetch actual repository structure from GitHub API
+    const getRepoStructure = async (repo: any) => {
+      try {
+        const response = await fetch(`https://api.github.com/repos/${repo.full_name}/contents`, {
+          headers: {
+            'Authorization': `token ${githubAccessToken}`,
+            'Accept': 'application/vnd.github.v3+json',
+          },
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch repo structure');
+        
+        const contents = await response.json();
+        const structure = await analyzeRepoStructure(contents, repo.full_name, '', 0, 2); // Max 2 levels deep
+        return structure;
+      } catch (error) {
+        console.error('Error fetching repo structure:', error);
+        // Fallback to generic structure based on language
+        return generateFallbackStructure(language, repoName);
+      }
+    };
+
+    // Recursively analyze repository structure
+    const analyzeRepoStructure = async (contents: any[], repoFullName: string, path: string, depth: number, maxDepth: number): Promise<string> => {
+      if (depth >= maxDepth) return '';
+      
+      const structure = [];
+      const indent = '  '.repeat(depth);
+      
+      for (const item of contents.slice(0, 20)) { // Limit to 20 items per level
+        if (item.type === 'dir') {
+          structure.push(`${indent}├── ${item.name}/`);
+          if (depth < maxDepth - 1) {
+            try {
+              const subResponse = await fetch(`https://api.github.com/repos/${repoFullName}/contents/${item.path}`, {
+                headers: {
+                  'Authorization': `token ${githubAccessToken}`,
+                  'Accept': 'application/vnd.github.v3+json',
+                },
+              });
+              if (subResponse.ok) {
+                const subContents = await subResponse.json();
+                const subStructure = await analyzeRepoStructure(subContents, repoFullName, item.path, depth + 1, maxDepth);
+                if (subStructure) structure.push(subStructure);
+              }
+            } catch (error) {
+              // Skip if can't fetch subdirectory
+            }
+          }
+        } else {
+          structure.push(`${indent}├── ${item.name}`);
+        }
+      }
+      
+      return structure.join('\n');
+    };
+
+    // Generate fallback structure based on detected language/framework
+    const generateFallbackStructure = (lang: string, name: string) => {
+      if (lang.includes('react') || lang.includes('typescript') || lang.includes('javascript')) {
+        return `${name}/
 ├── src/
 │   ├── components/
 │   ├── pages/
 │   ├── hooks/
-│   └── utils/
+│   ├── utils/
+│   └── assets/
 ├── public/
 ├── package.json
+├── tsconfig.json
 └── README.md`;
-
-    // Generate relevant files based on language and task
-    const getRelevantFiles = (task: string, lang: string) => {
-      const baseFiles = [
-        { path: "package.json", summary: "Project dependencies and configuration" },
-        { path: "src/App.tsx", summary: "Main application component" },
-      ];
-
-      if (lang.includes('react') || lang.includes('javascript') || lang.includes('typescript')) {
-        baseFiles.push(
-          { path: "src/components/", summary: "Reusable UI components" },
-          { path: "src/pages/", summary: "Application pages and routing" },
-          { path: "src/hooks/", summary: "Custom React hooks" }
-        );
+      } else if (lang.includes('python')) {
+        return `${name}/
+├── src/
+│   ├── models/
+│   ├── views/
+│   ├── controllers/
+│   └── utils/
+├── tests/
+├── requirements.txt
+└── README.md`;
+      } else if (lang.includes('java')) {
+        return `${name}/
+├── src/main/java/
+├── src/main/resources/
+├── src/test/java/
+├── pom.xml
+└── README.md`;
+      } else {
+        return `${name}/
+├── src/
+├── tests/
+├── config/
+└── README.md`;
       }
-
-      if (task.toLowerCase().includes('auth')) {
-        baseFiles.push(
-          { path: "src/hooks/useAuth.tsx", summary: "Authentication hook" },
-          { path: "src/components/ProtectedRoute.tsx", summary: "Route protection component" }
-        );
-      }
-
-      if (task.toLowerCase().includes('database') || task.toLowerCase().includes('data')) {
-        baseFiles.push(
-          { path: "supabase/", summary: "Database configuration and functions" },
-          { path: "src/integrations/", summary: "External service integrations" }
-        );
-      }
-
-      return baseFiles.map(f => `- ${f.path}: ${f.summary}`).join('\n');
     };
 
-    // Generate validation steps based on task type
-    const getValidationSteps = (task: string, lang: string) => {
+    const fileTreeStructure = await getRepoStructure(repo);
+
+    // Generate relevant files based on actual structure and task
+    const getRelevantFiles = async (task: string, lang: string, repoFullName: string) => {
+      try {
+        const response = await fetch(`https://api.github.com/repos/${repoFullName}/contents`, {
+          headers: {
+            'Authorization': `token ${githubAccessToken}`,
+            'Accept': 'application/vnd.github.v3+json',
+          },
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch files');
+        
+        const contents = await response.json();
+        const relevantFiles = [];
+        
+        // Always include root config files
+        const configFiles = contents.filter((item: any) => 
+          ['package.json', 'tsconfig.json', 'vite.config.ts', 'tailwind.config.ts', 'README.md', 'docker-compose.yml', 'Dockerfile'].includes(item.name)
+        );
+        
+        configFiles.forEach((file: any) => {
+          relevantFiles.push({
+            path: file.name,
+            summary: getFileSummary(file.name, lang)
+          });
+        });
+
+        // Add framework-specific files based on task
+        if (task.toLowerCase().includes('auth') && lang.includes('react')) {
+          relevantFiles.push(
+            { path: "src/hooks/useAuth.tsx", summary: "Authentication state management" },
+            { path: "src/components/ProtectedRoute.tsx", summary: "Route protection logic" },
+            { path: "src/pages/Auth.tsx", summary: "Authentication pages" }
+          );
+        }
+
+        if (task.toLowerCase().includes('database') || task.toLowerCase().includes('data')) {
+          relevantFiles.push(
+            { path: "src/integrations/supabase/", summary: "Database client and types" },
+            { path: "supabase/migrations/", summary: "Database schema migrations" }
+          );
+        }
+
+        if (task.toLowerCase().includes('ui') || task.toLowerCase().includes('component')) {
+          relevantFiles.push(
+            { path: "src/components/ui/", summary: "Reusable UI components" },
+            { path: "src/index.css", summary: "Global styles and design tokens" },
+            { path: "tailwind.config.ts", summary: "Design system configuration" }
+          );
+        }
+
+        return relevantFiles.map(f => `- ${f.path}: ${f.summary}`).join('\n');
+      } catch (error) {
+        // Fallback to generic files
+        return `- package.json: Project dependencies and configuration
+- src/main.tsx: Application entry point
+- src/App.tsx: Main application component
+- src/components/: Reusable UI components
+- src/pages/: Application pages and routing`;
+      }
+    };
+
+    // Get file summary based on filename and language
+    const getFileSummary = (filename: string, lang: string) => {
+      const summaries: Record<string, string> = {
+        'package.json': 'Project dependencies and scripts configuration',
+        'tsconfig.json': 'TypeScript compiler configuration',
+        'vite.config.ts': 'Build tool configuration and plugins',
+        'tailwind.config.ts': 'Design system and styling configuration',
+        'README.md': 'Project documentation and setup instructions',
+        'docker-compose.yml': 'Container orchestration configuration',
+        'Dockerfile': 'Container build instructions'
+      };
+      return summaries[filename] || `${filename} configuration file`;
+    };
+
+    // Generate validation steps based on actual tech stack and task
+    const getValidationSteps = (task: string, lang: string, repoName: string) => {
       const steps = [];
       
+      // Framework-specific validation
+      if (lang.includes('react') || lang.includes('typescript')) {
+        steps.push("- Run `npm run build` to ensure compilation works");
+        steps.push("- Check for TypeScript errors with `npm run type-check`");
+      }
+      
+      if (lang.includes('python')) {
+        steps.push("- Run tests with `pytest` or `python -m unittest`");
+        steps.push("- Check code formatting with `black` and `flake8`");
+      }
+      
+      // Task-specific validation
       if (task.toLowerCase().includes('auth')) {
-        steps.push("- Test login/logout functionality");
-        steps.push("- Verify protected routes work correctly");
-        steps.push("- Check session persistence");
+        steps.push("- Test user registration and login flows");
+        steps.push("- Verify JWT token handling and refresh logic");
+        steps.push("- Test protected route access controls");
+        steps.push("- Verify logout clears all session data");
       }
       
       if (task.toLowerCase().includes('database') || task.toLowerCase().includes('api')) {
-        steps.push("- Test API endpoints with curl or Postman");
-        steps.push("- Verify data persistence in database");
-        steps.push("- Check error handling for invalid requests");
+        steps.push("- Test all CRUD operations via API endpoints");
+        steps.push("- Verify database constraints and relationships");
+        steps.push("- Test error responses for invalid data");
+        steps.push("- Check database migrations run successfully");
       }
       
       if (task.toLowerCase().includes('ui') || task.toLowerCase().includes('component')) {
-        steps.push("- Test component rendering in different screen sizes");
-        steps.push("- Verify accessibility compliance");
-        steps.push("- Check component state management");
+        steps.push("- Test responsive design on mobile, tablet, desktop");
+        steps.push("- Verify keyboard navigation and screen reader support");
+        steps.push("- Test dark/light mode if applicable");
+        steps.push("- Validate component state changes work correctly");
       }
       
-      steps.push("- Run existing tests and ensure they pass");
-      steps.push("- Test the feature end-to-end in browser");
+      // Repository-specific validations
+      steps.push(`- Clone and run \`${repoName}\` locally to test integration`);
+      steps.push("- Verify all existing functionality still works");
+      steps.push("- Test the new feature end-to-end in production-like environment");
       
       return steps.join('\n');
     };
+
+    const relevantFiles = await getRelevantFiles(userTask, language, repo.full_name);
 
     return `You are an AI coding assistant helping a developer modify an existing project.  
 Always respect the repo structure and follow explicit instructions.  
 Never hallucinate or assume functionality that is not present in the repo.
 
 ## Repository Context
-- File structure:
-${fileTreeStructure}
+**Project**: ${repoName} (${language})
+**Description**: ${description}
 
-- Relevant files:
-${getRelevantFiles(userTask, language)}
+**File structure**:
+\`\`\`
+${fileTreeStructure}
+\`\`\`
+
+**Key files relevant to this task**:
+${relevantFiles}
 
 ## Task
 ${userTask}
 
 ## Implementation Requirements
-### Database
-- Check for ambiguous table/column names.  
-- Ensure correct table relationships are used.  
-- Verify primary and foreign keys before making changes.  
-- Do NOT introduce new tables/fields unless explicitly requested.
 
-### Integration
-- Check tokens, authentication, and permissions.  
-- Ensure secure handling of credentials.  
-- Use existing integration patterns from the repo.  
+### Architecture Analysis
+- **Framework**: Based on the structure, this appears to be a ${getFrameworkType(language, fileTreeStructure)} project
+- **Build System**: ${getBuildSystem(fileTreeStructure)}
+- **Styling**: ${getStylingApproach(fileTreeStructure)}
 
-### Backend
-- Do NOT hallucinate new modules, functions, or APIs.  
-- Avoid over-assumptions — only use code and patterns that exist in the repo.  
-- Maintain consistent error handling with the rest of the codebase.  
+### Database & Backend
+- Check for ambiguous table/column names in existing schema
+- Ensure correct table relationships are used based on current patterns
+- Verify primary and foreign keys before making changes
+- Do NOT introduce new tables/fields unless explicitly requested
+- Follow existing database connection patterns
 
-### Frontend
-- Ensure frontend is updated/rendered correctly to reflect backend changes.  
-- If new API endpoints are added, update UI components and calls accordingly.  
-- Follow existing styling and state management patterns.
+### Integration & Security
+- Check tokens, authentication, and permissions in existing code
+- Ensure secure handling of credentials following current patterns
+- Use existing integration patterns from the repo
+- Maintain consistent API endpoint structures
 
-## Validation
-- After implementation, verify functionality with:
-${getValidationSteps(userTask, language)}
+### Frontend & UI
+- Follow existing component structure and naming conventions
+- Ensure frontend updates reflect backend changes appropriately
+- Use existing styling system and design tokens
+- Maintain consistent state management patterns
+- Follow existing routing and navigation patterns
+
+### Code Quality
+- Do NOT hallucinate new modules, functions, or APIs
+- Avoid over-assumptions — only use code and patterns that exist
+- Maintain consistent error handling with the rest of the codebase
+- Follow existing code formatting and linting rules
+
+## Validation Steps
+${getValidationSteps(userTask, language, repoName)}
 
 ## Output Format
-- Provide code edits with exact file paths.  
-- Separate multiple files clearly (\`### File: path/to/file.js\`).  
-- Do not include unrelated explanations.`;
+- Provide code edits with exact file paths relative to project root
+- Use this format for multiple files: \`### File: path/to/file.js\`
+- Include brief explanations only when implementation requires clarification
+- Focus on the specific task without adding unnecessary features`;
+  };
+
+  // Helper functions for analyzing repository characteristics
+  const getFrameworkType = (language: string, structure: string) => {
+    if (structure.includes('vite.config') || structure.includes('src/main.tsx')) return 'React + Vite';
+    if (structure.includes('next.config') || structure.includes('pages/')) return 'Next.js';
+    if (structure.includes('nuxt.config')) return 'Nuxt.js';
+    if (structure.includes('django') || language.includes('python')) return 'Django/Python';
+    if (structure.includes('pom.xml') || language.includes('java')) return 'Spring Boot/Java';
+    if (language.includes('react') || language.includes('typescript')) return 'React';
+    return language || 'Web Application';
+  };
+
+  const getBuildSystem = (structure: string) => {
+    if (structure.includes('vite.config')) return 'Vite';
+    if (structure.includes('webpack.config')) return 'Webpack';
+    if (structure.includes('package.json')) return 'npm/pnpm';
+    if (structure.includes('pom.xml')) return 'Maven';
+    if (structure.includes('build.gradle')) return 'Gradle';
+    return 'Standard build tools';
+  };
+
+  const getStylingApproach = (structure: string) => {
+    if (structure.includes('tailwind.config')) return 'Tailwind CSS';
+    if (structure.includes('styled-components')) return 'Styled Components';
+    if (structure.includes('.scss') || structure.includes('.sass')) return 'SCSS/Sass';
+    if (structure.includes('emotion')) return 'Emotion';
+    return 'CSS/Standard styling';
   };
 
   // Generate contextual prompts based on repository analysis
-  const generateContextualPrompts = (repo: any) => {
+  const generateContextualPrompts = async (repo: any) => {
     const language = repo.language?.toLowerCase() || 'javascript';
     const repoName = repo.name;
     const isWebApp = language.includes('javascript') || language.includes('typescript') || language.includes('react');
@@ -253,11 +459,11 @@ ${getValidationSteps(userTask, language)}
       basePrompts.push(
         {
           title: "Mobile Responsive Optimization",
-          prompt: generateStructuredPrompt(repo, `Make the ${repoName} application fully mobile responsive. Analyze the current components and layouts, then optimize for mobile devices while maintaining the existing design system and user experience.`)
+          prompt: await generateStructuredPrompt(repo, `Make the ${repoName} application fully mobile responsive. Analyze the current components and layouts, then optimize for mobile devices while maintaining the existing design system and user experience.`)
         },
         {
           title: "Add Real-time Features",
-          prompt: generateStructuredPrompt(repo, `Integrate WebSocket or real-time functionality into ${repoName} using appropriate libraries for the ${language} stack. Consider the current architecture and add real-time updates where they would enhance user experience.`)
+          prompt: await generateStructuredPrompt(repo, `Integrate WebSocket or real-time functionality into ${repoName} using appropriate libraries for the ${language} stack. Consider the current architecture and add real-time updates where they would enhance user experience.`)
         }
       );
     }
@@ -266,11 +472,11 @@ ${getValidationSteps(userTask, language)}
       basePrompts.push(
         {
           title: "Push Notifications",
-          prompt: generateStructuredPrompt(repo, `Implement push notifications for the ${repoName} mobile app. Set up notification services, handle permissions, and create a notification management system that works with the current ${language} architecture.`)
+          prompt: await generateStructuredPrompt(repo, `Implement push notifications for the ${repoName} mobile app. Set up notification services, handle permissions, and create a notification management system that works with the current ${language} architecture.`)
         },
         {
           title: "Offline Mode Support",
-          prompt: generateStructuredPrompt(repo, `Add offline functionality to ${repoName}. Implement data caching, offline storage, and sync mechanisms that work seamlessly when the device reconnects to the internet.`)
+          prompt: await generateStructuredPrompt(repo, `Add offline functionality to ${repoName}. Implement data caching, offline storage, and sync mechanisms that work seamlessly when the device reconnects to the internet.`)
         }
       );
     }
@@ -279,11 +485,11 @@ ${getValidationSteps(userTask, language)}
       basePrompts.push(
         {
           title: "API Rate Limiting",
-          prompt: generateStructuredPrompt(repo, `Add rate limiting and security middleware to the ${repoName} API. Implement request throttling, authentication middleware, and monitoring that integrates with the existing ${language} backend architecture.`)
+          prompt: await generateStructuredPrompt(repo, `Add rate limiting and security middleware to the ${repoName} API. Implement request throttling, authentication middleware, and monitoring that integrates with the existing ${language} backend architecture.`)
         },
         {
           title: "Background Job Processing",
-          prompt: generateStructuredPrompt(repo, `Set up background job processing for ${repoName} using appropriate ${language} libraries. Add job queues, schedulers, and monitoring for long-running tasks.`)
+          prompt: await generateStructuredPrompt(repo, `Set up background job processing for ${repoName} using appropriate ${language} libraries. Add job queues, schedulers, and monitoring for long-running tasks.`)
         }
       );
     }
@@ -1501,8 +1707,8 @@ ${getValidationSteps(userTask, language)}
                                   {/* Predefined Prompts */}
                                   <div className="space-y-4">
                                     <h4 className="font-semibold text-sm">Quick Start Prompts</h4>
-                                    <div className="grid gap-3">
-                                      {generateContextualPrompts(repo).map((s, i) => (
+                                     <div className="grid gap-3">
+                                       {contextualPrompts.map((s, i) => (
                                         <div key={i} className="border border-border rounded-lg p-4">
                                           <div className="flex items-start justify-between mb-2">
                                             <h5 className="font-medium text-foreground">{s.title}</h5>
