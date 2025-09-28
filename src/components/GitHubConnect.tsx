@@ -81,28 +81,13 @@ const GitHubConnect = () => {
 
     setIsGenerating(true);
     try {
-      const codebaseInfo = {
-        language: repo.language,
-        type: repo.language?.toLowerCase().includes('javascript') || repo.language?.toLowerCase().includes('typescript') ? 'web app' : 
-              repo.language?.toLowerCase().includes('swift') || repo.language?.toLowerCase().includes('kotlin') ? 'mobile app' : 'backend',
-        description: repo.description,
-        name: repo.name
-      };
+      // Use the new structured template instead of calling the edge function
+      const structuredPrompt = generateStructuredPrompt(repo, featureInput);
+      setGeneratedPrompt(structuredPrompt);
       
-      const { data, error } = await supabase.functions.invoke('generate-prompt', {
-        body: {
-          feature: featureInput,
-          codebaseInfo,
-          model: selectedModel
-        }
-      });
-
-      if (error) throw error;
-
-      setGeneratedPrompt(data.generatedPrompt);
       toast({
         title: "Prompt generated!",
-        description: "Your optimized prompt has been generated successfully.",
+        description: "Your optimized structured prompt has been generated successfully.",
       });
     } catch (error) {
       console.error('Error generating prompt:', error);
@@ -116,6 +101,130 @@ const GitHubConnect = () => {
     }
   };
 
+  // Generate structured prompts using the comprehensive template
+  const generateStructuredPrompt = (repo: any, userTask: string) => {
+    const language = repo.language?.toLowerCase() || 'javascript';
+    const repoName = repo.name;
+    const description = repo.description || 'No description available';
+    
+    // Generate repository file tree structure (simplified)
+    const fileTreeStructure = `
+${repoName}/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   ├── hooks/
+│   └── utils/
+├── public/
+├── package.json
+└── README.md`;
+
+    // Generate relevant files based on language and task
+    const getRelevantFiles = (task: string, lang: string) => {
+      const baseFiles = [
+        { path: "package.json", summary: "Project dependencies and configuration" },
+        { path: "src/App.tsx", summary: "Main application component" },
+      ];
+
+      if (lang.includes('react') || lang.includes('javascript') || lang.includes('typescript')) {
+        baseFiles.push(
+          { path: "src/components/", summary: "Reusable UI components" },
+          { path: "src/pages/", summary: "Application pages and routing" },
+          { path: "src/hooks/", summary: "Custom React hooks" }
+        );
+      }
+
+      if (task.toLowerCase().includes('auth')) {
+        baseFiles.push(
+          { path: "src/hooks/useAuth.tsx", summary: "Authentication hook" },
+          { path: "src/components/ProtectedRoute.tsx", summary: "Route protection component" }
+        );
+      }
+
+      if (task.toLowerCase().includes('database') || task.toLowerCase().includes('data')) {
+        baseFiles.push(
+          { path: "supabase/", summary: "Database configuration and functions" },
+          { path: "src/integrations/", summary: "External service integrations" }
+        );
+      }
+
+      return baseFiles.map(f => `- ${f.path}: ${f.summary}`).join('\n');
+    };
+
+    // Generate validation steps based on task type
+    const getValidationSteps = (task: string, lang: string) => {
+      const steps = [];
+      
+      if (task.toLowerCase().includes('auth')) {
+        steps.push("- Test login/logout functionality");
+        steps.push("- Verify protected routes work correctly");
+        steps.push("- Check session persistence");
+      }
+      
+      if (task.toLowerCase().includes('database') || task.toLowerCase().includes('api')) {
+        steps.push("- Test API endpoints with curl or Postman");
+        steps.push("- Verify data persistence in database");
+        steps.push("- Check error handling for invalid requests");
+      }
+      
+      if (task.toLowerCase().includes('ui') || task.toLowerCase().includes('component')) {
+        steps.push("- Test component rendering in different screen sizes");
+        steps.push("- Verify accessibility compliance");
+        steps.push("- Check component state management");
+      }
+      
+      steps.push("- Run existing tests and ensure they pass");
+      steps.push("- Test the feature end-to-end in browser");
+      
+      return steps.join('\n');
+    };
+
+    return `You are an AI coding assistant helping a developer modify an existing project.  
+Always respect the repo structure and follow explicit instructions.  
+Never hallucinate or assume functionality that is not present in the repo.
+
+## Repository Context
+- File structure:
+${fileTreeStructure}
+
+- Relevant files:
+${getRelevantFiles(userTask, language)}
+
+## Task
+${userTask}
+
+## Implementation Requirements
+### Database
+- Check for ambiguous table/column names.  
+- Ensure correct table relationships are used.  
+- Verify primary and foreign keys before making changes.  
+- Do NOT introduce new tables/fields unless explicitly requested.
+
+### Integration
+- Check tokens, authentication, and permissions.  
+- Ensure secure handling of credentials.  
+- Use existing integration patterns from the repo.  
+
+### Backend
+- Do NOT hallucinate new modules, functions, or APIs.  
+- Avoid over-assumptions — only use code and patterns that exist in the repo.  
+- Maintain consistent error handling with the rest of the codebase.  
+
+### Frontend
+- Ensure frontend is updated/rendered correctly to reflect backend changes.  
+- If new API endpoints are added, update UI components and calls accordingly.  
+- Follow existing styling and state management patterns.
+
+## Validation
+- After implementation, verify functionality with:
+${getValidationSteps(userTask, language)}
+
+## Output Format
+- Provide code edits with exact file paths.  
+- Separate multiple files clearly (\`### File: path/to/file.js\`).  
+- Do not include unrelated explanations.`;
+  };
+
   // Generate contextual prompts based on repository analysis
   const generateContextualPrompts = (repo: any) => {
     const language = repo.language?.toLowerCase() || 'javascript';
@@ -127,15 +236,15 @@ const GitHubConnect = () => {
     const basePrompts = [
       {
         title: `Add Authentication to ${repoName}`,
-        prompt: `Analyze the ${repoName} codebase and implement a secure authentication system using the existing tech stack. Include login/signup forms that match the current design system, proper session management, and protect routes appropriately for this ${language} application.`
+        prompt: generateStructuredPrompt(repo, `Implement a secure authentication system for the ${repoName} ${language} application. Include login/signup forms that match the current design system, proper session management, and protect routes appropriately.`)
       },
       {
         title: `Database Integration`,
-        prompt: `Review the ${repoName} project structure and add database functionality using the most appropriate database for this ${language} stack. Create models, migrations, and API endpoints that follow the existing code patterns and architecture.`
+        prompt: generateStructuredPrompt(repo, `Add database functionality to ${repoName} using the most appropriate database for this ${language} stack. Create models, migrations, and API endpoints that follow the existing code patterns and architecture.`)
       },
       {
         title: `Add Testing Suite`,
-        prompt: `Set up comprehensive testing for the ${repoName} project using ${language}-appropriate testing frameworks. Include unit tests, integration tests, and end-to-end tests that cover the main functionality.`
+        prompt: generateStructuredPrompt(repo, `Set up comprehensive testing for the ${repoName} project using ${language}-appropriate testing frameworks. Include unit tests, integration tests, and end-to-end tests that cover the main functionality.`)
       }
     ];
 
@@ -144,11 +253,11 @@ const GitHubConnect = () => {
       basePrompts.push(
         {
           title: "Mobile Responsive Optimization",
-          prompt: `Make the ${repoName} application fully mobile responsive. Analyze the current components and layouts, then optimize for mobile devices while maintaining the existing design system and user experience.`
+          prompt: generateStructuredPrompt(repo, `Make the ${repoName} application fully mobile responsive. Analyze the current components and layouts, then optimize for mobile devices while maintaining the existing design system and user experience.`)
         },
         {
           title: "Add Real-time Features",
-          prompt: `Integrate WebSocket or real-time functionality into ${repoName} using appropriate libraries for the ${language} stack. Consider the current architecture and add real-time updates where they would enhance user experience.`
+          prompt: generateStructuredPrompt(repo, `Integrate WebSocket or real-time functionality into ${repoName} using appropriate libraries for the ${language} stack. Consider the current architecture and add real-time updates where they would enhance user experience.`)
         }
       );
     }
@@ -157,11 +266,11 @@ const GitHubConnect = () => {
       basePrompts.push(
         {
           title: "Push Notifications",
-          prompt: `Implement push notifications for the ${repoName} mobile app. Set up notification services, handle permissions, and create a notification management system that works with the current ${language} architecture.`
+          prompt: generateStructuredPrompt(repo, `Implement push notifications for the ${repoName} mobile app. Set up notification services, handle permissions, and create a notification management system that works with the current ${language} architecture.`)
         },
         {
           title: "Offline Mode Support",
-          prompt: `Add offline functionality to ${repoName}. Implement data caching, offline storage, and sync mechanisms that work seamlessly when the device reconnects to the internet.`
+          prompt: generateStructuredPrompt(repo, `Add offline functionality to ${repoName}. Implement data caching, offline storage, and sync mechanisms that work seamlessly when the device reconnects to the internet.`)
         }
       );
     }
@@ -170,16 +279,17 @@ const GitHubConnect = () => {
       basePrompts.push(
         {
           title: "API Rate Limiting",
-          prompt: `Add rate limiting and security middleware to the ${repoName} API. Implement request throttling, authentication middleware, and monitoring that integrates with the existing ${language} backend architecture.`
+          prompt: generateStructuredPrompt(repo, `Add rate limiting and security middleware to the ${repoName} API. Implement request throttling, authentication middleware, and monitoring that integrates with the existing ${language} backend architecture.`)
         },
         {
           title: "Background Job Processing",
-          prompt: `Set up background job processing for ${repoName} using appropriate ${language} libraries. Add job queues, schedulers, and monitoring for long-running tasks.`
+          prompt: generateStructuredPrompt(repo, `Set up background job processing for ${repoName} using appropriate ${language} libraries. Add job queues, schedulers, and monitoring for long-running tasks.`)
         }
       );
     }
 
     return basePrompts.slice(0, 6); // Return max 6 prompts
+  };
   };
 
   const getLanguageSpecificTips = (language: string) => {
