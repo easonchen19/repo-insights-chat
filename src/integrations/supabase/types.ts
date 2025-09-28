@@ -251,7 +251,11 @@ export type Database = {
         Returns: undefined
       }
       update_github_token: {
-        Args: { github_user_data?: Json; new_token: string; user_id: string }
+        Args: {
+          github_user_data?: Json
+          new_token: string
+          user_id_param: string
+        }
         Returns: undefined
       }
     }
