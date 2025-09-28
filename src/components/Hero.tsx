@@ -48,14 +48,13 @@ const Hero = () => {
         </div>
         
         <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-vibe bg-clip-text text-transparent animate-pulse">
-          Code like you are
+          Stop AI hallucinations in Cursor/Lovable.
           <br />
-          <span className="text-4xl md:text-6xl">a senior infra engineer</span>
+          <span className="text-4xl md:text-6xl">Paste repo-aware prompts that just work.</span>
         </h1>
         
         <p className="text-xl text-foreground/80 mb-8 max-w-2xl mx-auto leading-relaxed">
-          Bridge the gap between code and prompt with <span className="text-primary font-semibold">AI-powered analysis</span>, intelligent insights, 
-          and tools that elevate your development workflow to <span className="text-accent font-semibold">senior engineer level</span>.
+          We parse your repo, find the right files/functions, and generate prompts that guide AI to correct, runnable code.
         </p>
         
         <div className="mb-12 inline-flex items-center gap-3 bg-card/60 backdrop-blur-xl rounded-full px-8 py-4 text-lg font-medium border border-primary/30 shadow-glow">
