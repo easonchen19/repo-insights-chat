@@ -1649,6 +1649,9 @@ ${getValidationSteps(userTask, language, repoName)}
                           <Dialog onOpenChange={(open) => {
                             if (open) {
                               setCurrentRepo(repo);
+                              // Clear previous generated prompt for new repo
+                              setGeneratedPrompt("");
+                              setFeatureInput("");
                               loadContextualPrompts(repo);
                             }
                           }}>
@@ -1727,23 +1730,69 @@ ${getValidationSteps(userTask, language, repoName)}
                                   
                                   <Separator />
                                   
-                                  {/* Predefined Prompts */}
-                                  <div className="space-y-4">
-                                    <h4 className="font-semibold text-sm">Quick Start Prompts</h4>
+                                   {/* Predefined Prompts */}
+                                   <div className="space-y-4">
+                                     <h4 className="font-semibold text-sm">Quick Start Prompts</h4>
                                      <div className="grid gap-3">
                                        {contextualPrompts.map((s, i) => (
-                                        <div key={i} className="border border-border rounded-lg p-4">
-                                          <div className="flex items-start justify-between mb-2">
-                                            <h5 className="font-medium text-foreground">{s.title}</h5>
-                                            <Button variant="ghost" size="sm" className="text-xs" onClick={() => copyToClipboard(s.prompt)}>
-                                              <Copy className="w-3 h-3 mr-1" /> Copy
-                                            </Button>
-                                          </div>
-                                          <p className="text-sm text-muted-foreground leading-relaxed">{s.prompt}</p>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
+                                         <div key={i} className="border border-border rounded-lg overflow-hidden">
+                                           <div className="p-4 bg-muted/30">
+                                             <div className="flex items-start justify-between mb-2">
+                                               <h5 className="font-medium text-foreground">{s.title}</h5>
+                                               <Button 
+                                                 variant="ghost" 
+                                                 size="sm" 
+                                                 className="text-xs" 
+                                                 onClick={() => copyToClipboard(s.prompt)}
+                                               >
+                                                 <Copy className="w-3 h-3 mr-1" /> Copy Full Prompt
+                                               </Button>
+                                             </div>
+                                             <p className="text-xs text-muted-foreground mb-3">
+                                               Structured prompt with repository analysis, implementation requirements, and validation steps
+                                             </p>
+                                           </div>
+                                           <details className="group">
+                                             <summary className="cursor-pointer p-3 hover:bg-muted/20 text-sm font-medium flex items-center justify-between">
+                                               <span>Preview Prompt Structure</span>
+                                               <div className="text-xs text-muted-foreground group-open:hidden">Click to expand</div>
+                                               <div className="text-xs text-muted-foreground hidden group-open:block">Click to collapse</div>
+                                             </summary>
+                                             <div className="p-4 pt-0 border-t border-border/50">
+                                               <div className="text-xs space-y-2 text-muted-foreground">
+                                                 <div className="font-medium text-foreground">📁 Repository Context</div>
+                                                 <div className="ml-3">• Project structure analysis</div>
+                                                 <div className="ml-3">• Framework detection ({currentRepo?.language})</div>
+                                                 <div className="ml-3">• Key files identification</div>
+                                                 
+                                                 <div className="font-medium text-foreground mt-3">🎯 Task Definition</div>
+                                                 <div className="ml-3">• {s.title.toLowerCase()}</div>
+                                                 
+                                                 <div className="font-medium text-foreground mt-3">⚙️ Implementation Requirements</div>
+                                                 <div className="ml-3">• Architecture guidelines</div>
+                                                 <div className="ml-3">• Security considerations</div>
+                                                 <div className="ml-3">• Code quality standards</div>
+                                                 
+                                                 <div className="font-medium text-foreground mt-3">✅ Validation Steps</div>
+                                                 <div className="ml-3">• Testing procedures</div>
+                                                 <div className="ml-3">• Performance checks</div>
+                                                 <div className="ml-3">• Integration validation</div>
+                                               </div>
+                                               <Button 
+                                                 variant="outline" 
+                                                 size="sm" 
+                                                 className="w-full mt-4" 
+                                                 onClick={() => copyToClipboard(s.prompt)}
+                                               >
+                                                 <Copy className="w-3 h-3 mr-2" />
+                                                 Copy Complete Structured Prompt
+                                               </Button>
+                                             </div>
+                                           </details>
+                                         </div>
+                                       ))}
+                                     </div>
+                                   </div>
                                   
                                   <Separator />
                                   
