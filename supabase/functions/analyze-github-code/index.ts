@@ -409,7 +409,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { files, repoName } = body as { files?: FileData[]; repoName?: string };
+    const { files, repoName, model } = body as { files?: FileData[]; repoName?: string; model?: string };
 
     if (!files || !Array.isArray(files) || files.length === 0) {
       return new Response(JSON.stringify({ error: 'No files provided for analysis' }), {
@@ -548,13 +548,15 @@ Keep explanations clear for non-technical stakeholders while being specific enou
 
     console.log('📦 analyze-github-code: files received:', files.length, 'valid:', sanitized.length, 'limited:', limited.length, 'budgetLeft:', remaining);
 
-    // Try multiple models for reliability, starting with the cheapest
-    const models = ['claude-3-5-haiku-20241022', 'claude-3-5-sonnet-20241022', 'claude-sonnet-4-20250514'];
+    // Use the model selected by the user, with fallback to default models for reliability
+    const selectedModel = model || 'claude-3-5-haiku-20241022';
+    const fallbackModels = ['claude-3-5-haiku-20241022', 'claude-3-5-sonnet-20241022', 'claude-sonnet-4-20250514'];
+    const models = [selectedModel, ...fallbackModels.filter(m => m !== selectedModel)];
     let response: Response | null = null;
     let lastErrorText = '';
 
-    for (const model of models) {
-      console.log('🤖 Calling Claude model:', model);
+    for (const currentModel of models) {
+      console.log('🤖 Calling Claude model:', currentModel);
       response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -563,7 +565,7 @@ Keep explanations clear for non-technical stakeholders while being specific enou
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model,
+          model: currentModel,
           max_tokens: 3000,
           temperature: 0.5,
           stream: true, // Enable streaming
@@ -651,7 +653,7 @@ Keep explanations clear for non-technical stakeholders while being specific enou
   } catch (error) {
     console.error('💥 Error in analyze-github-code function:', error);
     return new Response(
-      JSON.stringify({ error: error?.message || 'Unexpected error', stack: (error as any)?.stack }),
+      JSON.stringify({ error: (error as Error)?.message || 'Unexpected error', stack: (error as Error)?.stack }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

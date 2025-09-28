@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { feature, codebaseInfo } = await req.json();
+    const { feature, codebaseInfo, model } = await req.json();
     
     if (!feature) {
       return new Response(
@@ -63,7 +63,7 @@ Generate a detailed prompt that would help an AI assistant implement this featur
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022',
+        model: model || 'claude-3-5-haiku-20241022', // Use selected model or default
         max_tokens: 1000,
         messages: [
           {
