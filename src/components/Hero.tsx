@@ -141,6 +141,64 @@ const Hero = () => {
             );
           })}
         </div>
+        
+        {/* Testimonials Section */}
+        <div className="relative z-10 w-full max-w-6xl mx-auto px-6 mt-32 mb-20">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-vibe bg-clip-text text-transparent">
+              Developers love Lovable Mate
+            </h2>
+            <p className="text-xl text-foreground/70 max-w-2xl mx-auto">
+              See how we're helping developers ship faster with better AI prompts
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                name: "Sarah Chen",
+                role: "Senior Frontend Developer",
+                company: "TechCorp",
+                quote: "Before Lovable Mate, I spent hours debugging AI-generated code that didn't work with our existing codebase. Now I get perfect, context-aware prompts every time.",
+                avatar: "SC"
+              },
+              {
+                name: "Marcus Rodriguez",
+                role: "Full Stack Engineer", 
+                company: "StartupXYZ",
+                quote: "The repo analysis is incredible. It actually understands our architecture and generates prompts that produce working code on the first try. Game changer for our team.",
+                avatar: "MR"
+              },
+              {
+                name: "Alex Kim",
+                role: "Tech Lead",
+                company: "DevStudio",
+                quote: "We reduced our AI debugging time by 80%. The prompts are so precise that even junior developers can get senior-level results from AI tools.",
+                avatar: "AK"
+              }
+            ].map((testimonial, index) => (
+              <Card 
+                key={testimonial.name}
+                className="p-6 bg-card/60 backdrop-blur-xl border-primary/20 hover:border-primary/40 transition-all duration-500 hover:shadow-glow group"
+                style={{ animationDelay: `${index * 0.2}s` }}
+              >
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-bold text-sm">
+                    {testimonial.avatar}
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground">{testimonial.name}</h4>
+                    <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                    <p className="text-xs text-primary font-medium">{testimonial.company}</p>
+                  </div>
+                </div>
+                <blockquote className="text-foreground/80 italic leading-relaxed">
+                  "{testimonial.quote}"
+                </blockquote>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
       
       {/* Connect Git CTA */}
