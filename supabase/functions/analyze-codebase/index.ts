@@ -411,7 +411,7 @@ Remember: Write everything in simple, encouraging language. Avoid technical jarg
 
   } catch (error) {
     console.error('Error in analyze-codebase function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
