@@ -651,7 +651,7 @@ Keep explanations clear for non-technical stakeholders while being specific enou
   } catch (error) {
     console.error('💥 Error in analyze-github-code function:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unexpected error', stack: error instanceof Error ? error.stack : undefined }),
+      JSON.stringify({ error: error?.message || 'Unexpected error', stack: (error as any)?.stack }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
