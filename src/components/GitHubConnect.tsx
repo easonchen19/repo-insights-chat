@@ -81,7 +81,16 @@ const GitHubConnect = () => {
     }
   };
 
-  const generatePrompt = async (repo: Repository) => {
+  const generatePrompt = async (repo?: Repository) => {
+    const targetRepo = repo || currentRepo;
+    if (!targetRepo) {
+      toast({
+        title: "Error",
+        description: "No repository selected.",
+        variant: "destructive"
+      });
+      return;
+    }
     if (!featureInput.trim()) {
       toast({
         title: "Error",
@@ -94,7 +103,7 @@ const GitHubConnect = () => {
     setIsGenerating(true);
     try {
       // Use the new structured template with real repo analysis
-      const structuredPrompt = await generateStructuredPrompt(repo, featureInput);
+      const structuredPrompt = await generateStructuredPrompt(targetRepo, featureInput);
       setGeneratedPrompt(structuredPrompt);
       
       toast({
@@ -439,62 +448,71 @@ ${getValidationSteps(userTask, language, repoName)}
     const isMobile = language.includes('swift') || language.includes('kotlin') || language.includes('dart');
     const isBackend = language.includes('python') || language.includes('java') || language.includes('go') || language.includes('rust');
     
-    const basePrompts = [
+    // Create all prompt generation tasks
+    const promptTasks = [
       {
         title: `Add Authentication to ${repoName}`,
-        prompt: generateStructuredPrompt(repo, `Implement a secure authentication system for the ${repoName} ${language} application. Include login/signup forms that match the current design system, proper session management, and protect routes appropriately.`)
+        task: generateStructuredPrompt(repo, `Implement a secure authentication system for the ${repoName} ${language} application. Include login/signup forms that match the current design system, proper session management, and protect routes appropriately.`)
       },
       {
         title: `Database Integration`,
-        prompt: generateStructuredPrompt(repo, `Add database functionality to ${repoName} using the most appropriate database for this ${language} stack. Create models, migrations, and API endpoints that follow the existing code patterns and architecture.`)
+        task: generateStructuredPrompt(repo, `Add database functionality to ${repoName} using the most appropriate database for this ${language} stack. Create models, migrations, and API endpoints that follow the existing code patterns and architecture.`)
       },
       {
         title: `Add Testing Suite`,
-        prompt: generateStructuredPrompt(repo, `Set up comprehensive testing for the ${repoName} project using ${language}-appropriate testing frameworks. Include unit tests, integration tests, and end-to-end tests that cover the main functionality.`)
+        task: generateStructuredPrompt(repo, `Set up comprehensive testing for the ${repoName} project using ${language}-appropriate testing frameworks. Include unit tests, integration tests, and end-to-end tests that cover the main functionality.`)
       }
     ];
 
     // Add language-specific prompts
     if (isWebApp) {
-      basePrompts.push(
+      promptTasks.push(
         {
           title: "Mobile Responsive Optimization",
-          prompt: await generateStructuredPrompt(repo, `Make the ${repoName} application fully mobile responsive. Analyze the current components and layouts, then optimize for mobile devices while maintaining the existing design system and user experience.`)
+          task: generateStructuredPrompt(repo, `Make the ${repoName} application fully mobile responsive. Analyze the current components and layouts, then optimize for mobile devices while maintaining the existing design system and user experience.`)
         },
         {
           title: "Add Real-time Features",
-          prompt: await generateStructuredPrompt(repo, `Integrate WebSocket or real-time functionality into ${repoName} using appropriate libraries for the ${language} stack. Consider the current architecture and add real-time updates where they would enhance user experience.`)
+          task: generateStructuredPrompt(repo, `Integrate WebSocket or real-time functionality into ${repoName} using appropriate libraries for the ${language} stack. Consider the current architecture and add real-time updates where they would enhance user experience.`)
         }
       );
     }
 
     if (isMobile) {
-      basePrompts.push(
+      promptTasks.push(
         {
           title: "Push Notifications",
-          prompt: await generateStructuredPrompt(repo, `Implement push notifications for the ${repoName} mobile app. Set up notification services, handle permissions, and create a notification management system that works with the current ${language} architecture.`)
+          task: generateStructuredPrompt(repo, `Implement push notifications for the ${repoName} mobile app. Set up notification services, handle permissions, and create a notification management system that works with the current ${language} architecture.`)
         },
         {
           title: "Offline Mode Support",
-          prompt: await generateStructuredPrompt(repo, `Add offline functionality to ${repoName}. Implement data caching, offline storage, and sync mechanisms that work seamlessly when the device reconnects to the internet.`)
+          task: generateStructuredPrompt(repo, `Add offline functionality to ${repoName}. Implement data caching, offline storage, and sync mechanisms that work seamlessly when the device reconnects to the internet.`)
         }
       );
     }
 
     if (isBackend) {
-      basePrompts.push(
+      promptTasks.push(
         {
           title: "API Rate Limiting",
-          prompt: await generateStructuredPrompt(repo, `Add rate limiting and security middleware to the ${repoName} API. Implement request throttling, authentication middleware, and monitoring that integrates with the existing ${language} backend architecture.`)
+          task: generateStructuredPrompt(repo, `Add rate limiting and security middleware to the ${repoName} API. Implement request throttling, authentication middleware, and monitoring that integrates with the existing ${language} backend architecture.`)
         },
         {
           title: "Background Job Processing",
-          prompt: await generateStructuredPrompt(repo, `Set up background job processing for ${repoName} using appropriate ${language} libraries. Add job queues, schedulers, and monitoring for long-running tasks.`)
+          task: generateStructuredPrompt(repo, `Set up background job processing for ${repoName} using appropriate ${language} libraries. Add job queues, schedulers, and monitoring for long-running tasks.`)
         }
       );
     }
 
-    return basePrompts.slice(0, 6); // Return max 6 prompts
+    // Resolve all prompts in parallel
+    const resolvedPrompts = await Promise.all(
+      promptTasks.slice(0, 6).map(async (item) => ({
+        title: item.title,
+        prompt: await item.task
+      }))
+    );
+
+    return resolvedPrompts;
   };
 
   const getLanguageSpecificTips = (language: string) => {
@@ -1628,7 +1646,12 @@ ${getValidationSteps(userTask, language, repoName)}
                             Analyze Code
                           </Button>
                           
-                          <Dialog>
+                          <Dialog onOpenChange={(open) => {
+                            if (open) {
+                              setCurrentRepo(repo);
+                              loadContextualPrompts(repo);
+                            }
+                          }}>
                             <DialogTrigger asChild>
                               <Button variant="outline">
                                 <Lightbulb className="w-4 h-4 mr-2" />
@@ -1660,7 +1683,7 @@ ${getValidationSteps(userTask, language, repoName)}
                                       className="min-h-[80px]"
                                     />
                                     <Button
-                                      onClick={() => generatePrompt(repo)}
+                                      onClick={() => generatePrompt()}
                                       disabled={isGenerating || !featureInput.trim()}
                                       className="w-full"
                                     >
