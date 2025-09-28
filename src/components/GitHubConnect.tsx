@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { ModelSelector, useModelSelection } from "@/components/ModelSelector";
 
 interface Repository {
   id: number;
@@ -36,6 +37,9 @@ const GitHubConnect = () => {
   const [githubAccessToken, setGithubAccessToken] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [showRepositories, setShowRepositories] = useState(false);
+  
+  // Model selection for AI features
+  const { selectedModel, setSelectedModel } = useModelSelection();
   
   // File selection modal state
   const [showFileSelectionModal, setShowFileSelectionModal] = useState(false);
@@ -88,7 +92,8 @@ const GitHubConnect = () => {
       const { data, error } = await supabase.functions.invoke('generate-prompt', {
         body: {
           feature: featureInput,
-          codebaseInfo
+          codebaseInfo,
+          model: selectedModel
         }
       });
 
@@ -823,7 +828,8 @@ const GitHubConnect = () => {
         },
         body: JSON.stringify({
           files: payloadFiles,
-          repoName: currentAnalysisRepo?.name
+          repoName: currentAnalysisRepo?.name,
+          model: selectedModel
         }),
       });
 
@@ -1196,6 +1202,28 @@ const GitHubConnect = () => {
             )}
           </div>
         </div>
+
+        {/* AI Settings - Show when connected */}
+        {isConnected && (
+          <Card className="p-4 mb-6 bg-card/30 backdrop-blur-sm border-primary/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                  AI Analysis Settings
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Choose which Claude model to use for repository analysis and prompt generation
+                </p>
+              </div>
+              <div className="w-64">
+                <ModelSelector 
+                  selectedModel={selectedModel} 
+                  onModelChange={setSelectedModel}
+                />
+              </div>
+            </div>
+          </Card>
+        )}
 
         {!isConnected && !isLoading && repositories.length === 0 && (
           <Card className="p-8 bg-card/50 backdrop-blur-sm text-center">
