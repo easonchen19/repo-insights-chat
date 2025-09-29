@@ -28,7 +28,6 @@ const Footer = () => {
                 href="https://www.linkedin.com/in/easonchen19/"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Visit Eason Chen's LinkedIn profile"
                 className="p-2 rounded-lg bg-muted/50 hover:bg-primary/10 border border-border hover:border-primary/30 transition-all duration-300 group"
               >
                 <Linkedin className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -37,7 +36,6 @@ const Footer = () => {
                 href="https://github.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Visit GitHub platform"
                 className="p-2 rounded-lg bg-muted/50 hover:bg-primary/10 border border-border hover:border-primary/30 transition-all duration-300 group"
               >
                 <Github className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
