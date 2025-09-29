@@ -23,9 +23,42 @@
     <link rel="dns-prefetch" href="https://fonts.googleapis.com">
     <link rel="dns-prefetch" href="https://fonts.gstatic.com">
     <link rel="modulepreload" href="/src/main.tsx">
-    <link rel="preload" href="/src/index.css" as="style">
+    <link rel="preload" href="/src/index.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <link rel="preload" href="/src/App.tsx" as="script" crossorigin>
     <link rel="prefetch" href="/src/pages/Index.tsx" as="script" crossorigin>
+    
+    <!-- Inline critical CSS optimization script -->
+    <script>
+      // Optimize CSS loading to prevent render blocking
+      (function() {
+        function loadCSS(href, media) {
+          var link = document.createElement('link');
+          link.rel = 'preload';
+          link.as = 'style';
+          link.href = href;
+          link.media = media || 'all';
+          link.onload = function() {
+            this.onload = null;
+            this.rel = 'stylesheet';
+          };
+          document.head.appendChild(link);
+        }
+        
+        // Defer non-critical CSS if needed
+        document.addEventListener('DOMContentLoaded', function() {
+          var stylesheets = document.querySelectorAll('link[rel="stylesheet"]');
+          stylesheets.forEach(function(link) {
+            if (link.href.includes('index-') && link.href.includes('.css')) {
+              link.media = 'print';
+              link.onload = function() {
+                this.media = 'all';
+                this.onload = null;
+              };
+            }
+          });
+        });
+      })();
+    </script>
   </head>
 
   <body>
