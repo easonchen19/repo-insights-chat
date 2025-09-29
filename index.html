@@ -20,8 +20,12 @@
     <!-- Resource hints for performance optimization -->
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
     <link rel="modulepreload" href="/src/main.tsx">
     <link rel="preload" href="/src/index.css" as="style">
+    <link rel="preload" href="/src/App.tsx" as="script" crossorigin>
+    <link rel="prefetch" href="/src/pages/Index.tsx" as="script" crossorigin>
   </head>
 
   <body>
