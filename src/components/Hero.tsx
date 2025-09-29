@@ -131,9 +131,9 @@ const Hero = () => {
                     feature.color === 'primary' ? 'text-primary' : 'text-accent'
                   } group-hover:animate-pulse`} />
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-foreground group-hover:text-primary transition-colors duration-500">
+                <h2 className="text-xl font-bold mb-3 text-foreground group-hover:text-primary transition-colors duration-500">
                   {feature.title}
-                </h3>
+                </h2>
                 <p className="text-muted-foreground group-hover:text-foreground/80 transition-colors duration-500">
                   {feature.desc}
                 </p>
@@ -187,7 +187,7 @@ const Hero = () => {
                     {testimonial.avatar}
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground">{testimonial.name}</h4>
+                    <h3 className="font-semibold text-foreground">{testimonial.name}</h3>
                     <p className="text-sm text-muted-foreground">{testimonial.role}</p>
                     <p className="text-xs text-primary font-medium">{testimonial.company}</p>
                   </div>
@@ -205,9 +205,9 @@ const Hero = () => {
       <div className="relative z-10 w-full max-w-7xl mx-auto px-6">
         <div className="text-center mt-20 mb-20">
           <div className="mb-8">
-            <h3 className="text-3xl md:text-4xl font-bold mb-6 bg-gradient-vibe bg-clip-text text-transparent">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 bg-gradient-vibe bg-clip-text text-transparent">
               Ready to supercharge your development?
-            </h3>
+            </h2>
             <p className="text-xl text-foreground/70 max-w-2xl mx-auto mb-4">
               Connect your GitHub and unlock <span className="text-primary font-semibold">bidirectional sync</span>, 
               automatic deployments, and seamless collaboration.
