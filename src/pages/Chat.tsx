@@ -2,6 +2,7 @@ import { ChatProvider } from "@/contexts/ChatContext";
 import { useChatContext } from "@/contexts/ChatContext";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatArea } from "@/components/chat/ChatArea";
+import { useState } from "react";
 
 function ChatContent() {
   const {
@@ -12,6 +13,8 @@ function ChatContent() {
     toggleSidebar,
   } = useChatContext();
 
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
   const currentConversation = state.conversations.find(
     (c) => c.id === state.currentConversationId
   );
@@ -21,6 +24,8 @@ function ChatContent() {
       <ChatSidebar
         isCollapsed={state.sidebarCollapsed}
         onToggle={toggleSidebar}
+        isMobileOpen={isMobileOpen}
+        onMobileToggle={() => setIsMobileOpen(!isMobileOpen)}
       />
       <ChatArea
         currentChat={currentConversation}
@@ -31,6 +36,7 @@ function ChatContent() {
         onStopGeneration={stopGeneration}
         onRegenerate={regenerateResponse}
         error={null}
+        onMobileSidebarToggle={() => setIsMobileOpen(!isMobileOpen)}
       />
     </div>
   );

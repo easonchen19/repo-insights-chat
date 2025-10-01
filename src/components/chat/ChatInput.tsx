@@ -72,23 +72,25 @@ export function ChatInput({ onSend, isGenerating, onStopGeneration }: ChatInputP
               onChange={handleFileChange}
               multiple
             />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleFileClick}
-              disabled={isGenerating}
-            >
-              <Paperclip className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              disabled={isGenerating}
-            >
-              <Mic className="h-4 w-4" />
-            </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 active:scale-95 transition-transform focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={handleFileClick}
+            disabled={isGenerating}
+            aria-label="Attach file"
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 active:scale-95 transition-transform focus-visible:ring-2 focus-visible:ring-ring"
+            disabled={isGenerating}
+            aria-label="Voice input"
+          >
+            <Mic className="h-4 w-4" />
+          </Button>
           </div>
         </div>
         {isGenerating ? (
@@ -96,7 +98,8 @@ export function ChatInput({ onSend, isGenerating, onStopGeneration }: ChatInputP
             onClick={onStopGeneration}
             size="icon"
             variant="destructive"
-            className="h-11 w-11 shrink-0"
+            className="h-11 w-11 shrink-0 active:scale-95 transition-transform focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Stop generation"
           >
             <Square className="h-4 w-4" />
           </Button>
@@ -105,7 +108,8 @@ export function ChatInput({ onSend, isGenerating, onStopGeneration }: ChatInputP
             onClick={handleSend}
             disabled={!input.trim()}
             size="icon"
-            className="h-11 w-11 shrink-0"
+            className="h-11 w-11 shrink-0 active:scale-95 transition-transform focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Send message"
           >
             <Send className="h-4 w-4" />
           </Button>

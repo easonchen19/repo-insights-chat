@@ -25,11 +25,14 @@ export function ChatMessage({ message, onRegenerate }: ChatMessageProps) {
   return (
     <div
       className={cn(
-        "flex w-full gap-4 group",
+        "group relative flex items-center gap-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none rounded-lg",
         isUser ? "justify-end" : "justify-start"
       )}
       onMouseEnter={() => setShowTimestamp(true)}
       onMouseLeave={() => setShowTimestamp(false)}
+      role="article"
+      aria-label={`${isUser ? "Your" : "Assistant"} message`}
+      tabIndex={0}
     >
       {/* Avatar - Left side for AI */}
       {!isUser && (
@@ -76,8 +79,9 @@ export function ChatMessage({ message, onRegenerate }: ChatMessageProps) {
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 px-2"
+            className="h-6 px-2 active:scale-95 transition-transform focus-visible:ring-2 focus-visible:ring-ring"
             onClick={handleCopy}
+            aria-label={copied ? "Copied" : "Copy message"}
           >
             {copied ? (
               <>
@@ -96,8 +100,9 @@ export function ChatMessage({ message, onRegenerate }: ChatMessageProps) {
             <Button
               size="sm"
               variant="ghost"
-              className="h-6 px-2"
+              className="h-6 px-2 active:scale-95 transition-transform focus-visible:ring-2 focus-visible:ring-ring"
               onClick={onRegenerate}
+              aria-label="Regenerate response"
             >
               <RotateCcw className="h-3 w-3 mr-1" />
               Regenerate

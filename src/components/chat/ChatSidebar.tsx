@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Trash2, Settings, Moon, LogOut, Edit2 } from "lucide-react";
+import { useState, useRef, MouseEvent as ReactMouseEvent, useEffect } from "react";
+import { Plus, Trash2, Settings, Moon, LogOut, Edit2, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -13,6 +13,8 @@ import { ExportImportButtons } from "./ExportImportButtons";
 interface ChatSidebarProps {
   isCollapsed: boolean;
   onToggle: () => void;
+  isMobileOpen: boolean;
+  onMobileToggle: () => void;
 }
 
 function groupChatsByDate(sessions: any[]) {
@@ -51,7 +53,7 @@ function groupChatsByDate(sessions: any[]) {
   return groups;
 }
 
-export function ChatSidebar({ isCollapsed }: ChatSidebarProps) {
+export function ChatSidebar({ isCollapsed, isMobileOpen, onMobileToggle }: ChatSidebarProps) {
   const {
     state,
     createNewChat,
@@ -68,9 +70,41 @@ export function ChatSidebar({ isCollapsed }: ChatSidebarProps) {
   const [editTitle, setEditTitle] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(280);
+  const [isResizing, setIsResizing] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
 
   const filteredConversations = getFilteredConversations();
   const groupedChats = groupChatsByDate(filteredConversations);
+
+  // Drag to resize handler
+  const handleMouseDown = (e: ReactMouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isResizing) return;
+    const newWidth = e.clientX;
+    if (newWidth >= 240 && newWidth <= 400) {
+      setSidebarWidth(newWidth);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsResizing(false);
+  };
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      return () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [isResizing]);
 
   const handleEdit = (chat: any, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -99,6 +133,13 @@ export function ChatSidebar({ isCollapsed }: ChatSidebarProps) {
     }
   };
 
+  const handleChatSelect = (id: string) => {
+    selectConversation(id);
+    if (isMobileOpen) {
+      onMobileToggle();
+    }
+  };
+
   const renderChatGroup = (title: string, chats: any[]) => {
     if (chats.length === 0) return null;
 
@@ -119,8 +160,17 @@ export function ChatSidebar({ isCollapsed }: ChatSidebarProps) {
                   ? "bg-primary/10 text-primary"
                   : "hover:bg-muted text-muted-foreground hover:text-foreground"
               )}
-              onClick={() => selectConversation(chat.id)}
+              onClick={() => handleChatSelect(chat.id)}
               title={chat.title}
+              role="button"
+              aria-label={`Select conversation: ${chat.title}`}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleChatSelect(chat.id);
+                }
+              }}
             >
               {!isCollapsed ? (
                 <>
@@ -185,8 +235,9 @@ export function ChatSidebar({ isCollapsed }: ChatSidebarProps) {
       <div className="p-3 border-b border-border space-y-2">
         <Button
           onClick={createNewChat}
-          className="w-full justify-start gap-2"
+          className="w-full justify-start gap-2 active:scale-95 transition-transform"
           variant="outline"
+          aria-label="Create new chat"
         >
           <Plus className="h-4 w-4" />
           {!isCollapsed && <span>New Chat</span>}
@@ -231,24 +282,27 @@ export function ChatSidebar({ isCollapsed }: ChatSidebarProps) {
         )}
         <Button
           variant="ghost"
-          className="w-full justify-start gap-2"
+          className="w-full justify-start gap-2 active:scale-95 transition-transform"
           size={isCollapsed ? "icon" : "default"}
+          aria-label="Settings"
         >
           <Settings className="h-4 w-4" />
           {!isCollapsed && <span>Settings</span>}
         </Button>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-2"
+          className="w-full justify-start gap-2 active:scale-95 transition-transform"
           size={isCollapsed ? "icon" : "default"}
+          aria-label="Toggle theme"
         >
           <Moon className="h-4 w-4" />
           {!isCollapsed && <span>Theme</span>}
         </Button>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-2 text-destructive hover:text-destructive"
+          className="w-full justify-start gap-2 text-destructive hover:text-destructive active:scale-95 transition-transform"
           size={isCollapsed ? "icon" : "default"}
+          aria-label="Logout"
         >
           <LogOut className="h-4 w-4" />
           {!isCollapsed && <span>Logout</span>}
@@ -268,13 +322,55 @@ export function ChatSidebar({ isCollapsed }: ChatSidebarProps) {
 
       {/* Desktop Sidebar */}
       <aside
+        ref={sidebarRef}
         className={cn(
           "hidden md:flex flex-col border-r border-border bg-card/50 backdrop-blur-sm transition-all duration-300 ease-in-out relative",
-          isCollapsed ? "w-[60px]" : "w-[280px]"
+          isCollapsed ? "w-[60px]" : "lg:w-[280px] md:w-[240px]"
         )}
+        style={!isCollapsed && sidebarWidth ? { width: `${sidebarWidth}px` } : undefined}
+        aria-label="Chat sidebar"
       >
         {sidebarContent}
+        {/* Resize Handle */}
+        {!isCollapsed && (
+          <div
+            className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors group"
+            onMouseDown={handleMouseDown}
+            aria-label="Resize sidebar"
+          >
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-12 bg-border group-hover:bg-primary/40 transition-colors" />
+          </div>
+        )}
       </aside>
+
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <>
+          <div
+            className="md:hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40 animate-fade-in"
+            onClick={onMobileToggle}
+            aria-hidden="true"
+          />
+          <aside 
+            className="md:hidden fixed left-0 top-0 bottom-0 w-[280px] bg-card border-r border-border z-50 flex flex-col animate-slide-in-left"
+            aria-label="Mobile chat sidebar"
+          >
+            <div className="flex items-center justify-between p-3 border-b border-border">
+              <h2 className="text-lg font-semibold">Conversations</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onMobileToggle}
+                aria-label="Close sidebar"
+                className="active:scale-95 transition-transform"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            {sidebarContent}
+          </aside>
+        </>
+      )}
     </>
   );
 }
