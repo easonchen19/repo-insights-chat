@@ -3,7 +3,7 @@ import { Copy, Check, RotateCcw, Bot, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { ChatMessage as ChatMessageType } from "@/pages/Chat";
+import { ChatMessage as ChatMessageType } from "@/contexts/ChatContext";
 import { MarkdownMessage } from "./MarkdownMessage";
 
 interface ChatMessageProps {

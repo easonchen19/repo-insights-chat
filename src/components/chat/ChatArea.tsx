@@ -7,10 +7,10 @@ import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { WelcomePrompts } from "./WelcomePrompts";
-import { ChatSession } from "@/pages/Chat";
+import { Conversation } from "@/contexts/ChatContext";
 
 interface ChatAreaProps {
-  currentChat: ChatSession | undefined;
+  currentChat: Conversation | undefined;
   isSidebarCollapsed: boolean;
   onToggleSidebar: () => void;
   onSendMessage: (content: string) => void;

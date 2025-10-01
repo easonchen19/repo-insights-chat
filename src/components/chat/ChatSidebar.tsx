@@ -1,24 +1,21 @@
-import { useState, useEffect } from "react";
-import { Plus, Trash2, Settings, Moon, LogOut, Edit2, GripVertical, X } from "lucide-react";
+import { useState } from "react";
+import { Plus, Trash2, Settings, Moon, LogOut, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { ChatSession } from "@/pages/Chat";
+import { useChatContext } from "@/contexts/ChatContext";
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
+import { SearchBar } from "./SearchBar";
+import { ExportImportButtons } from "./ExportImportButtons";
 
 interface ChatSidebarProps {
   isCollapsed: boolean;
   onToggle: () => void;
-  chatSessions: ChatSession[];
-  currentChatId: string | null;
-  onSelectChat: (chatId: string) => void;
-  onNewChat: () => void;
-  onDeleteChat: (chatId: string) => void;
-  onRenameChat?: (chatId: string, newTitle: string) => void;
 }
 
-function groupChatsByDate(sessions: ChatSession[]) {
+function groupChatsByDate(sessions: any[]) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today);
@@ -29,15 +26,15 @@ function groupChatsByDate(sessions: ChatSession[]) {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const groups = {
-    today: [] as ChatSession[],
-    yesterday: [] as ChatSession[],
-    previous7Days: [] as ChatSession[],
-    previous30Days: [] as ChatSession[],
-    older: [] as ChatSession[],
+    today: [] as any[],
+    yesterday: [] as any[],
+    previous7Days: [] as any[],
+    previous30Days: [] as any[],
+    older: [] as any[],
   };
 
   sessions.forEach((session) => {
-    const sessionDate = new Date(session.timestamp);
+    const sessionDate = new Date(session.updatedAt);
     if (sessionDate >= today) {
       groups.today.push(session);
     } else if (sessionDate >= yesterday) {
@@ -54,48 +51,55 @@ function groupChatsByDate(sessions: ChatSession[]) {
   return groups;
 }
 
-export function ChatSidebar({
-  isCollapsed,
-  chatSessions,
-  currentChatId,
-  onSelectChat,
-  onNewChat,
-  onDeleteChat,
-  onRenameChat,
-}: ChatSidebarProps) {
+export function ChatSidebar({ isCollapsed }: ChatSidebarProps) {
+  const {
+    state,
+    createNewChat,
+    selectConversation,
+    deleteConversation,
+    updateChatTitle,
+    searchConversations,
+    exportChats,
+    importChats,
+    getFilteredConversations,
+  } = useChatContext();
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState<{ id: string; title: string } | null>(null);
 
-  // Keyboard shortcut: Cmd/Ctrl + B
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "b") {
-        e.preventDefault();
-        setIsMobileOpen((prev) => !prev);
-      }
-    };
+  const filteredConversations = getFilteredConversations();
+  const groupedChats = groupChatsByDate(filteredConversations);
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  const groupedChats = groupChatsByDate(chatSessions);
-
-  const handleEdit = (chat: ChatSession, e: React.MouseEvent) => {
+  const handleEdit = (chat: any, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingId(chat.id);
     setEditTitle(chat.title);
   };
 
   const handleSaveEdit = (chatId: string) => {
-    if (editTitle.trim() && onRenameChat) {
-      onRenameChat(chatId, editTitle.trim());
+    if (editTitle.trim()) {
+      updateChatTitle(chatId, editTitle.trim());
     }
     setEditingId(null);
   };
 
-  const renderChatGroup = (title: string, chats: ChatSession[]) => {
+  const handleDeleteClick = (chat: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setChatToDelete({ id: chat.id, title: chat.title });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (chatToDelete) {
+      deleteConversation(chatToDelete.id);
+      setDeleteDialogOpen(false);
+      setChatToDelete(null);
+    }
+  };
+
+  const renderChatGroup = (title: string, chats: any[]) => {
     if (chats.length === 0) return null;
 
     return (
@@ -111,11 +115,11 @@ export function ChatSidebar({
               key={chat.id}
               className={cn(
                 "group relative flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer transition-all duration-200 hover:scale-[1.02]",
-                currentChatId === chat.id
+                state.currentConversationId === chat.id
                   ? "bg-primary/10 text-primary"
                   : "hover:bg-muted text-muted-foreground hover:text-foreground"
               )}
-              onClick={() => onSelectChat(chat.id)}
+              onClick={() => selectConversation(chat.id)}
               title={chat.title}
             >
               {!isCollapsed ? (
@@ -155,10 +159,7 @@ export function ChatSidebar({
                           size="icon"
                           variant="ghost"
                           className="h-6 w-6"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteChat(chat.id);
-                          }}
+                          onClick={(e) => handleDeleteClick(chat, e)}
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -181,15 +182,22 @@ export function ChatSidebar({
   const sidebarContent = (
     <>
       {/* Header */}
-      <div className="p-3 border-b border-border">
+      <div className="p-3 border-b border-border space-y-2">
         <Button
-          onClick={onNewChat}
+          onClick={createNewChat}
           className="w-full justify-start gap-2"
           variant="outline"
         >
           <Plus className="h-4 w-4" />
           {!isCollapsed && <span>New Chat</span>}
         </Button>
+        {!isCollapsed && (
+          <SearchBar
+            value={state.searchQuery}
+            onChange={searchConversations}
+            onClear={() => searchConversations("")}
+          />
+        )}
       </div>
 
       {/* Chat History */}
@@ -203,27 +211,23 @@ export function ChatSidebar({
         </div>
       </ScrollArea>
 
-      {/* Drag Handle */}
-      {!isCollapsed && (
-        <div className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 items-center justify-center w-1 h-20 cursor-col-resize hover:bg-primary/20 transition-colors group">
-          <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
-      )}
-
       {/* Footer */}
       <div className="p-3 border-t border-border space-y-2">
         {!isCollapsed && (
-          <div className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-muted/50 transition-colors">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                JD
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 truncate">
-              <p className="text-sm font-medium">John Doe</p>
-              <p className="text-xs text-muted-foreground">john@example.com</p>
+          <>
+            <ExportImportButtons onExport={exportChats} onImport={importChats} />
+            <div className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-muted/50 transition-colors">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                  JD
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 truncate">
+                <p className="text-sm font-medium">John Doe</p>
+                <p className="text-xs text-muted-foreground">john@example.com</p>
+              </div>
             </div>
-          </div>
+          </>
         )}
         <Button
           variant="ghost"
@@ -255,6 +259,13 @@ export function ChatSidebar({
 
   return (
     <>
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        chatTitle={chatToDelete?.title || ""}
+      />
+
       {/* Desktop Sidebar */}
       <aside
         className={cn(
@@ -264,27 +275,6 @@ export function ChatSidebar({
       >
         {sidebarContent}
       </aside>
-
-      {/* Mobile Overlay */}
-      {isMobileOpen && (
-        <>
-          <div
-            className="md:hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
-            onClick={() => setIsMobileOpen(false)}
-          />
-          <aside className="md:hidden fixed left-0 top-0 bottom-0 w-[280px] bg-card border-r border-border z-50 flex flex-col animate-slide-in-right">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-3 right-3"
-              onClick={() => setIsMobileOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-            {sidebarContent}
-          </aside>
-        </>
-      )}
     </>
   );
 }
