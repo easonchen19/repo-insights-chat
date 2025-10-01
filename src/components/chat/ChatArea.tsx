@@ -69,7 +69,7 @@ export function ChatArea({
       <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
       
       {/* Header */}
-      <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center px-4 gap-3 shrink-0">
+      <header className="h-14 border-b border-border sidebar flex items-center px-4 gap-3 shrink-0 shadow-sm">
         <Button
           variant="ghost"
           size="icon"
@@ -155,7 +155,7 @@ export function ChatArea({
       </div>
 
       {/* Input Bar */}
-      <div className="border-t border-border bg-card/50 backdrop-blur-sm shrink-0">
+      <div className="border-t border-border sidebar shrink-0 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <ChatInput
             onSend={onSendMessage}

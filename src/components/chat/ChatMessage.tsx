@@ -47,10 +47,10 @@ export function ChatMessage({ message, onRegenerate }: ChatMessageProps) {
         {/* Message bubble */}
         <div
           className={cn(
-            "max-w-[700px] rounded-2xl px-4 py-3 shadow-sm relative",
+            "max-w-[700px] rounded-2xl px-4 py-3 shadow-sm relative transition-fast",
             isUser
-              ? "bg-primary text-primary-foreground rounded-br-sm"
-              : "bg-muted text-foreground rounded-bl-sm"
+              ? "message-user rounded-br-sm"
+              : "message-ai rounded-bl-sm"
           )}
         >
           {isUser ? (

@@ -45,13 +45,13 @@ export function WelcomePrompts({ onSelectPrompt }: WelcomePromptsProps) {
           {suggestedPrompts.map((prompt, index) => {
             const Icon = prompt.icon;
             return (
-          <Button
-            key={index}
-            variant="outline"
-            className="h-auto p-4 flex flex-col items-start gap-2 hover:bg-muted/50 transition-all hover:scale-105 active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-            onClick={() => onSelectPrompt(prompt.prompt)}
-            aria-label={`Use prompt: ${prompt.title}`}
-          >
+            <Button
+              key={index}
+              variant="outline"
+              className="h-auto p-4 flex flex-col items-start gap-2 hover:bg-muted/50 transition-fast card-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => onSelectPrompt(prompt.prompt)}
+              aria-label={`Use prompt: ${prompt.title}`}
+            >
                 <div className="flex items-center gap-2">
                   <Icon className="h-4 w-4 text-primary" />
                   <span className="font-semibold text-sm">{prompt.title}</span>

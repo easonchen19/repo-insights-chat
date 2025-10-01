@@ -54,7 +54,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] p-0 gap-0" aria-describedby="command-palette-description">
+      <DialogContent className="sm:max-w-[600px] p-0 gap-0 glass" aria-describedby="command-palette-description">
         <DialogHeader className="px-4 pt-4 pb-2">
           <DialogTitle>Search Conversations</DialogTitle>
           <p id="command-palette-description" className="sr-only">
@@ -87,9 +87,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   key={conv.id}
                   onClick={() => handleSelect(conv.id)}
                   className={cn(
-                    "w-full flex items-start gap-3 px-3 py-2 rounded-lg text-left transition-all duration-200",
+                    "w-full flex items-start gap-3 px-3 py-2 rounded-lg text-left transition-fast card-hover",
                     selectedIndex === index
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-primary/10 text-primary shadow-sm"
                       : "hover:bg-muted"
                   )}
                   role="option"

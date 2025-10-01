@@ -152,26 +152,25 @@ export function ChatSidebar({ isCollapsed, isMobileOpen, onMobileToggle }: ChatS
         )}
         <div className="space-y-1">
           {chats.map((chat) => (
-            <div
-              key={chat.id}
-              className={cn(
-                "group relative flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer transition-all duration-200 hover:scale-[1.02]",
-                state.currentConversationId === chat.id
-                  ? "bg-primary/10 text-primary"
-                  : "hover:bg-muted text-muted-foreground hover:text-foreground"
-              )}
-              onClick={() => handleChatSelect(chat.id)}
-              title={chat.title}
-              role="button"
-              aria-label={`Select conversation: ${chat.title}`}
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleChatSelect(chat.id);
-                }
-              }}
-            >
+              <div
+                className={cn(
+                  "group relative flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer transition-fast card-hover",
+                  state.currentConversationId === chat.id
+                    ? "bg-primary/10 text-primary shadow-sm"
+                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                )}
+                onClick={() => handleChatSelect(chat.id)}
+                title={chat.title}
+                role="button"
+                aria-label={`Select conversation: ${chat.title}`}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleChatSelect(chat.id);
+                  }
+                }}
+              >
               {!isCollapsed ? (
                 <>
                   {editingId === chat.id ? (
@@ -324,7 +323,7 @@ export function ChatSidebar({ isCollapsed, isMobileOpen, onMobileToggle }: ChatS
       <aside
         ref={sidebarRef}
         className={cn(
-          "hidden md:flex flex-col border-r border-border bg-card/50 backdrop-blur-sm transition-all duration-300 ease-in-out relative",
+          "hidden md:flex flex-col border-r border-border sidebar transition-all duration-300 ease-in-out relative",
           isCollapsed ? "w-[60px]" : "lg:w-[280px] md:w-[240px]"
         )}
         style={!isCollapsed && sidebarWidth ? { width: `${sidebarWidth}px` } : undefined}
@@ -347,12 +346,12 @@ export function ChatSidebar({ isCollapsed, isMobileOpen, onMobileToggle }: ChatS
       {isMobileOpen && (
         <>
           <div
-            className="md:hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40 animate-fade-in"
+            className="md:hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40 animate-fade-in glass"
             onClick={onMobileToggle}
             aria-hidden="true"
           />
           <aside 
-            className="md:hidden fixed left-0 top-0 bottom-0 w-[280px] bg-card border-r border-border z-50 flex flex-col animate-slide-in-left"
+            className="md:hidden fixed left-0 top-0 bottom-0 w-[280px] sidebar border-r border-border z-50 flex flex-col animate-slide-in-left"
             aria-label="Mobile chat sidebar"
           >
             <div className="flex items-center justify-between p-3 border-b border-border">
