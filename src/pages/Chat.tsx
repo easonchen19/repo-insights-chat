@@ -18,6 +18,8 @@ export interface ChatSession {
 
 const Chat = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([
     {
       id: "1",
@@ -72,6 +74,9 @@ const Chat = () => {
   const handleSendMessage = (content: string) => {
     if (!currentChatId) return;
 
+    setError(null);
+    setIsGenerating(true);
+
     const newMessage: ChatMessage = {
       id: Date.now().toString(),
       role: "user",
@@ -91,12 +96,12 @@ const Chat = () => {
       )
     );
 
-    // Simulate assistant response
+    // Simulate assistant response with streaming effect
     setTimeout(() => {
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "This is a simulated response. Implement your AI logic here.",
+        content: "This is a **simulated response**. Here's some example code:\n\n```typescript\nconst example = () => {\n  console.log('Hello, World!');\n};\n```\n\nImplement your AI logic here with real streaming support.",
         timestamp: new Date(),
       };
 
@@ -107,7 +112,37 @@ const Chat = () => {
             : chat
         )
       );
-    }, 1000);
+      setIsGenerating(false);
+    }, 1500);
+  };
+
+  const handleStopGeneration = () => {
+    setIsGenerating(false);
+  };
+
+  const handleRegenerate = (messageId: string) => {
+    if (!currentChatId) return;
+
+    setError(null);
+    setIsGenerating(true);
+
+    // Remove the message being regenerated and regenerate
+    setChatSessions(
+      chatSessions.map((chat) => {
+        if (chat.id === currentChatId) {
+          const messageIndex = chat.messages.findIndex((m) => m.id === messageId);
+          if (messageIndex > 0) {
+            const previousMessage = chat.messages[messageIndex - 1];
+            handleSendMessage(previousMessage.content);
+            return {
+              ...chat,
+              messages: chat.messages.slice(0, messageIndex),
+            };
+          }
+        }
+        return chat;
+      })
+    );
   };
 
   return (
@@ -127,6 +162,10 @@ const Chat = () => {
         isSidebarCollapsed={isSidebarCollapsed}
         onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onSendMessage={handleSendMessage}
+        isGenerating={isGenerating}
+        onStopGeneration={handleStopGeneration}
+        onRegenerate={handleRegenerate}
+        error={error}
       />
     </div>
   );
