@@ -61,6 +61,14 @@ const Chat = () => {
     }
   };
 
+  const handleRenameChat = (chatId: string, newTitle: string) => {
+    setChatSessions(
+      chatSessions.map((chat) =>
+        chat.id === chatId ? { ...chat, title: newTitle } : chat
+      )
+    );
+  };
+
   const handleSendMessage = (content: string) => {
     if (!currentChatId) return;
 
@@ -112,6 +120,7 @@ const Chat = () => {
         onSelectChat={setCurrentChatId}
         onNewChat={handleNewChat}
         onDeleteChat={handleDeleteChat}
+        onRenameChat={handleRenameChat}
       />
       <ChatArea
         currentChat={currentChat}
