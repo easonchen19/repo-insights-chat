@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.analyze-github-code]
 verify_jwt = false
+
+[functions.suggest-features]
+verify_jwt = false
+
+[functions.generate-prompt]
+verify_jwt = false

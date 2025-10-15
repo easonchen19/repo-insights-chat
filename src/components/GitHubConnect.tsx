@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { ModelSelector, useModelSelection } from "@/components/ModelSelector";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { FeatureSuggestions } from "@/components/FeatureSuggestions";
 
 interface Repository {
   id: number;
@@ -63,12 +64,102 @@ const GitHubConnect = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [contextualPrompts, setContextualPrompts] = useState<{title: string; prompt: string}[]>([]);
   
+  // Feature suggestions state
+  const [featureSuggestions, setFeatureSuggestions] = useState<any[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<any>(null);
+  
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
       toast({ title: "Copied to clipboard", description: "Prompt copied successfully!" });
     } catch (err) {
       toast({ title: "Copy failed", description: "Please copy manually.", variant: "destructive" });
+    }
+  };
+
+  // Load feature suggestions based on analysis
+  const loadFeatureSuggestions = async () => {
+    if (!analysisResult) return;
+    
+    setIsLoadingSuggestions(true);
+    try {
+      const SUPABASE_URL = "https://wfywmkdqyuucxftpvmfj.supabase.co";
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/suggest-features`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          analysisReport: analysisResult,
+          model: selectedModel
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate feature suggestions');
+      }
+
+      const data = await response.json();
+      setFeatureSuggestions(data.suggestions || []);
+    } catch (error) {
+      console.error('Error loading feature suggestions:', error);
+      toast({
+        title: "Suggestions Failed",
+        description: "Could not generate feature suggestions.",
+        variant: "destructive"
+      });
+      setFeatureSuggestions([]);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  };
+
+  // Handle clicking on a feature suggestion
+  const handleSuggestionClick = async (suggestion: any) => {
+    setSelectedSuggestion(suggestion);
+    setIsGenerating(true);
+    setGeneratedPrompt("");
+    
+    try {
+      const SUPABASE_URL = "https://wfywmkdqyuucxftpvmfj.supabase.co";
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-prompt`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          feature: `${suggestion.title}: ${suggestion.description}`,
+          codebaseInfo: {
+            analysis: analysisResult,
+            repoName: currentAnalysisRepo?.name,
+            language: currentAnalysisRepo?.language,
+            description: currentAnalysisRepo?.description
+          },
+          model: selectedModel
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate prompt');
+      }
+
+      const data = await response.json();
+      setGeneratedPrompt(data.generatedPrompt);
+      
+      toast({
+        title: "Prompt Generated!",
+        description: "Click to copy the prompt for this feature.",
+      });
+    } catch (error) {
+      console.error('Error generating prompt:', error);
+      toast({
+        title: "Generation Failed",
+        description: "Could not generate prompt for this feature.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -1197,6 +1288,8 @@ ${getValidationSteps(userTask, language, repoName)}
                   title: "Analysis Complete",
                   description: `Successfully analyzed ${selectedFiles.size} files from ${currentAnalysisRepo?.name}.`,
                 });
+                // Load feature suggestions after analysis completes
+                loadFeatureSuggestions();
               }
             } catch (e) {
               // Skip invalid JSON
@@ -1593,6 +1686,9 @@ ${getValidationSteps(userTask, language, repoName)}
                     setCurrentAnalysisRepo(null);
                     setAnalysisResult("");
                     setIsAnalyzing(false);
+                    setFeatureSuggestions([]);
+                    setGeneratedPrompt("");
+                    setSelectedSuggestion(null);
                   }}
                   className="mb-4"
                 >
@@ -1602,13 +1698,16 @@ ${getValidationSteps(userTask, language, repoName)}
 
                 {/* Two-Panel Layout */}
                 <ResizablePanelGroup direction="horizontal" className="min-h-[600px] rounded-lg border">
-                  {/* Left Panel - File Selection */}
+                  {/* Left Panel - File Selection or Feature Suggestions */}
                   <ResizablePanel defaultSize={40} minSize={30}>
                     <div className="h-full flex flex-col p-6 bg-background">
-                      <div className="mb-4">
-                        <h2 className="text-xl font-semibold mb-1">Select Files to Analyze</h2>
-                        <p className="text-sm text-muted-foreground">{currentAnalysisRepo?.name}</p>
-                      </div>
+                      {!isAnalyzing && !analysisResult ? (
+                        // Show File Selection BEFORE analysis
+                        <>
+                          <div className="mb-4">
+                            <h2 className="text-xl font-semibold mb-1">Select Files to Analyze</h2>
+                            <p className="text-sm text-muted-foreground">{currentAnalysisRepo?.name}</p>
+                          </div>
 
                       {/* Select All Controls */}
                       <div className="flex items-center justify-between mb-4 p-3 bg-muted/50 rounded-lg">
@@ -1657,41 +1756,114 @@ ${getValidationSteps(userTask, language, repoName)}
                         </div>
                       </ScrollArea>
 
-                      {/* Start Analysis Button */}
-                      <div className="mt-4 pt-4 border-t">
-                        <Button 
-                          variant="hero"
-                          onClick={handleStartAnalysis}
-                          disabled={selectedFiles.size === 0 || isAnalyzing}
-                          className="w-full"
-                        >
-                          {isAnalyzing ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Analyzing...
-                            </>
+                          {/* Start Analysis Button */}
+                          <div className="mt-4 pt-4 border-t">
+                            <Button 
+                              variant="hero"
+                              onClick={handleStartAnalysis}
+                              disabled={selectedFiles.size === 0 || isAnalyzing}
+                              className="w-full"
+                            >
+                              {isAnalyzing ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Analyzing...
+                                </>
+                              ) : (
+                                `Start Analysis (${selectedFiles.size} files)`
+                              )}
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        // Show Feature Suggestions AFTER analysis
+                        <ScrollArea className="h-full">
+                          {isLoadingSuggestions ? (
+                            <div className="flex flex-col items-center justify-center h-full space-y-4">
+                              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                              <p className="text-sm text-muted-foreground">Generating feature suggestions...</p>
+                            </div>
+                          ) : featureSuggestions.length > 0 ? (
+                            <FeatureSuggestions 
+                              suggestions={featureSuggestions}
+                              onSuggestionClick={handleSuggestionClick}
+                              isGenerating={isGenerating}
+                            />
                           ) : (
-                            `Start Analysis (${selectedFiles.size} files)`
+                            <div className="flex flex-col items-center justify-center h-full space-y-4 text-center px-4">
+                              <Lightbulb className="w-12 h-12 text-muted-foreground/50" />
+                              <div>
+                                <h3 className="font-semibold mb-2">No Suggestions Available</h3>
+                                <p className="text-sm text-muted-foreground">
+                                  Complete the analysis to see feature suggestions
+                                </p>
+                              </div>
+                            </div>
                           )}
-                        </Button>
-                      </div>
+                        </ScrollArea>
+                      )}
                     </div>
                   </ResizablePanel>
 
                   <ResizableHandle withHandle />
 
-                  {/* Right Panel - Analysis Results */}
+                  {/* Right Panel - Analysis Results or Generated Prompt */}
                   <ResizablePanel defaultSize={60} minSize={40}>
                     <div className="h-full flex flex-col p-6 bg-muted/20">
                       <div className="mb-4">
-                        <h2 className="text-xl font-semibold mb-1">Analysis Report</h2>
+                        <h2 className="text-xl font-semibold mb-1">
+                          {generatedPrompt ? 'Generated Prompt' : 'Analysis Report'}
+                        </h2>
                         <p className="text-sm text-muted-foreground">
-                          {isAnalyzing ? 'Analyzing your code...' : analysisResult ? 'Analysis complete' : 'Results will appear here'}
+                          {generatedPrompt 
+                            ? selectedSuggestion?.title 
+                            : isAnalyzing ? 'Analyzing your code...' : analysisResult ? 'Analysis complete' : 'Results will appear here'
+                          }
                         </p>
                       </div>
 
                       <ScrollArea className="flex-1">
-                        {analysisResult ? (
+                        {generatedPrompt ? (
+                          // Show Generated Prompt
+                          <div className="space-y-4">
+                            <Card className="p-6 bg-background">
+                              <div className="flex items-start justify-between mb-4">
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-1">{selectedSuggestion?.title}</h3>
+                                  <p className="text-sm text-muted-foreground">{selectedSuggestion?.description}</p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => copyToClipboard(generatedPrompt)}
+                                >
+                                  <Copy className="w-4 h-4 mr-2" />
+                                  Copy Prompt
+                                </Button>
+                              </div>
+                              
+                              <Separator className="my-4" />
+                              
+                              <div className="prose prose-sm max-w-none">
+                                <pre className="whitespace-pre-wrap bg-muted p-4 rounded-lg text-sm">
+                                  {generatedPrompt}
+                                </pre>
+                              </div>
+                            </Card>
+                            
+                            <Button
+                              variant="ghost"
+                              onClick={() => {
+                                setGeneratedPrompt("");
+                                setSelectedSuggestion(null);
+                              }}
+                              className="w-full"
+                            >
+                              Back to Analysis
+                            </Button>
+                          </div>
+                        ) : analysisResult ? (
+                          // Show Analysis Report
                           <div className="prose prose-sm max-w-none bg-background p-4 rounded-lg">
                             {formatAnalysis(analysisResult)}
                           </div>
