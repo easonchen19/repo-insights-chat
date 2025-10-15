@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Github, Search, Star, GitBranch, Calendar, ExternalLink, Copy, Lightbulb, Send, Loader2 } from "lucide-react";
+import { Github, Search, Star, GitBranch, Calendar, ExternalLink, Copy, Lightbulb, Send, Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { ModelSelector, useModelSelection } from "@/components/ModelSelector";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface Repository {
   id: number;
@@ -41,8 +42,10 @@ const GitHubConnect = () => {
   // Model selection for AI features
   const { selectedModel, setSelectedModel } = useModelSelection();
   
-  // File selection modal state
-  const [showFileSelectionModal, setShowFileSelectionModal] = useState(false);
+  // Analysis mode state - controls whether we show two-panel layout
+  const [isAnalyzingMode, setIsAnalyzingMode] = useState(false);
+  
+  // File selection state
   const [repoFiles, setRepoFiles] = useState<{ [key: string]: any[] }>({});
   const [allFiles, setAllFiles] = useState<any[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
@@ -55,7 +58,6 @@ const GitHubConnect = () => {
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [currentRepo, setCurrentRepo] = useState<Repository | null>(null);
   const [analysisResult, setAnalysisResult] = useState<string>("");
-  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   const [featureInput, setFeatureInput] = useState('');
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -1039,7 +1041,9 @@ ${getValidationSteps(userTask, language, repoName)}
         // Select all files by default (only valid ones)
         const allFilePaths = normalizedFiles.map((file: any) => file.path);
         setSelectedFiles(new Set(allFilePaths));
-        setShowFileSelectionModal(true);
+        // Enter analyzing mode instead of showing modal
+        setIsAnalyzingMode(true);
+        setAnalysisResult(""); // Clear previous results
       }
     } catch (error: any) {
       console.error('Error analyzing repository:', error);
@@ -1120,10 +1124,8 @@ ${getValidationSteps(userTask, language, repoName)}
 
     console.log("Starting analysis with selected files:", Array.from(selectedFiles));
     
-    // Show modal immediately with loading state
+    // Clear previous results and start analyzing
     setAnalysisResult("");
-    setShowAnalysisModal(true);
-    setShowFileSelectionModal(false);
     setIsAnalyzing(true);
 
     try {
@@ -1577,6 +1579,141 @@ ${getValidationSteps(userTask, language, repoName)}
 
         {isConnected && showRepositories && (
           <div>
+            {/* Two-panel Analysis Mode */}
+            {isAnalyzingMode ? (
+              <div className="mb-6">
+                {/* Back Button */}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsAnalyzingMode(false);
+                    setSelectedFiles(new Set());
+                    setRepoFiles({});
+                    setAllFiles([]);
+                    setCurrentAnalysisRepo(null);
+                    setAnalysisResult("");
+                    setIsAnalyzing(false);
+                  }}
+                  className="mb-4"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Repositories
+                </Button>
+
+                {/* Two-Panel Layout */}
+                <ResizablePanelGroup direction="horizontal" className="min-h-[600px] rounded-lg border">
+                  {/* Left Panel - File Selection */}
+                  <ResizablePanel defaultSize={40} minSize={30}>
+                    <div className="h-full flex flex-col p-6 bg-background">
+                      <div className="mb-4">
+                        <h2 className="text-xl font-semibold mb-1">Select Files to Analyze</h2>
+                        <p className="text-sm text-muted-foreground">{currentAnalysisRepo?.name}</p>
+                      </div>
+
+                      {/* Select All Controls */}
+                      <div className="flex items-center justify-between mb-4 p-3 bg-muted/50 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="select-all"
+                            checked={selectedFiles.size === allFiles.length && allFiles.length > 0}
+                            onCheckedChange={handleSelectAll}
+                          />
+                          <label htmlFor="select-all" className="font-medium text-sm">
+                            Select All ({selectedFiles.size}/{allFiles.length} files)
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* File List */}
+                      <ScrollArea className="flex-1 border rounded-lg">
+                        <div className="p-4 space-y-4">
+                          {Object.entries(repoFiles).map(([folderName, files]) => (
+                            <div key={folderName} className="space-y-2">
+                              <div className="text-sm font-semibold text-muted-foreground bg-muted/30 px-2 py-1 rounded">
+                                📁 {folderName === 'root' ? '(Root Directory)' : folderName} ({files.length} files)
+                              </div>
+                              {files.map((file, index) => (
+                                <div 
+                                  key={`${folderName}-${index}`}
+                                  className="flex items-center space-x-3 p-2 ml-4 hover:bg-muted/50 rounded transition-colors"
+                                >
+                                  <Checkbox
+                                    id={`file-${folderName}-${index}`}
+                                    checked={selectedFiles.has(file.path)}
+                                    onCheckedChange={(checked) => handleFileSelection(file.path, checked as boolean)}
+                                  />
+                                  <div className="flex-1">
+                                    <div className="text-sm font-medium truncate">
+                                      {folderName === 'root' ? file.path : file.path.split('/').slice(1).join('/')}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {file.type} • {file.content ? `${file.content.length} chars` : 'Empty'}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+
+                      {/* Start Analysis Button */}
+                      <div className="mt-4 pt-4 border-t">
+                        <Button 
+                          variant="hero"
+                          onClick={handleStartAnalysis}
+                          disabled={selectedFiles.size === 0 || isAnalyzing}
+                          className="w-full"
+                        >
+                          {isAnalyzing ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Analyzing...
+                            </>
+                          ) : (
+                            `Start Analysis (${selectedFiles.size} files)`
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </ResizablePanel>
+
+                  <ResizableHandle withHandle />
+
+                  {/* Right Panel - Analysis Results */}
+                  <ResizablePanel defaultSize={60} minSize={40}>
+                    <div className="h-full flex flex-col p-6 bg-muted/20">
+                      <div className="mb-4">
+                        <h2 className="text-xl font-semibold mb-1">Analysis Report</h2>
+                        <p className="text-sm text-muted-foreground">
+                          {isAnalyzing ? 'Analyzing your code...' : analysisResult ? 'Analysis complete' : 'Results will appear here'}
+                        </p>
+                      </div>
+
+                      <ScrollArea className="flex-1">
+                        {analysisResult ? (
+                          <div className="prose prose-sm max-w-none bg-background p-4 rounded-lg">
+                            {formatAnalysis(analysisResult)}
+                          </div>
+                        ) : isAnalyzing ? (
+                          <div className="text-center py-12">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                            <p className="text-muted-foreground">Analyzing your code...</p>
+                            <p className="text-sm text-muted-foreground mt-2">This may take a few moments</p>
+                          </div>
+                        ) : (
+                          <div className="text-center py-12 text-muted-foreground">
+                            <p>Select files and click "Start Analysis" to begin</p>
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </div>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
+              </div>
+            ) : (
+              /* Repository List View */
+              <div>
 
             {repositories.length > 0 && (
               <>
@@ -1839,131 +1976,9 @@ ${getValidationSteps(userTask, language, repoName)}
               </Card>
             )}
           </div>
+            )}
+          </div>
         )}
-        
-        {/* File Selection Modal */}
-        <Dialog open={showFileSelectionModal} onOpenChange={setShowFileSelectionModal}>
-          <DialogContent className="max-w-4xl max-h-[80vh]">
-            <DialogHeader>
-              <DialogTitle>Select Files to Analyze - {currentAnalysisRepo?.name}</DialogTitle>
-            </DialogHeader>
-            
-            <div className="flex flex-col h-[60vh]">
-              {/* Select All Controls */}
-              <div className="flex items-center justify-between mb-4 p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="select-all"
-                    checked={selectedFiles.size === allFiles.length && allFiles.length > 0}
-                    onCheckedChange={handleSelectAll}
-                  />
-                  <label htmlFor="select-all" className="font-medium">
-                    Select All ({selectedFiles.size}/{allFiles.length} files selected)
-                  </label>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {allFiles.length} files found
-                </div>
-              </div>
-
-              {/* File List with Folder Structure */}
-              <div className="flex-1 overflow-y-auto border rounded-lg p-4 space-y-4">
-                {Object.entries(repoFiles).map(([folderName, files]) => (
-                  <div key={folderName} className="space-y-2">
-                    {/* Folder Header */}
-                    <div className="text-sm font-semibold text-muted-foreground bg-muted/30 px-2 py-1 rounded">
-                      📁 {folderName === 'root' ? '(Root Directory)' : folderName} ({files.length} files)
-                    </div>
-                    
-                    {/* Files in Folder */}
-                    {files.map((file, index) => (
-                      <div 
-                        key={`${folderName}-${index}`}
-                        className="flex items-center space-x-3 p-2 ml-4 hover:bg-muted/50 rounded transition-colors"
-                      >
-                        <Checkbox
-                          id={`file-${folderName}-${index}`}
-                          checked={selectedFiles.has(file.path)}
-                          onCheckedChange={(checked) => handleFileSelection(file.path, checked as boolean)}
-                        />
-                        <div className="flex-1">
-                          <div className="text-sm font-medium truncate">
-                            {folderName === 'root' ? file.path : file.path.split('/').slice(1).join('/')}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {file.type} • {file.content ? `${file.content.length} chars` : 'Empty'}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-
-              {/* Actions */}
-              <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowFileSelectionModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  variant="hero"
-                  onClick={handleStartAnalysis}
-                  disabled={selectedFiles.size === 0}
-                >
-                  Start Analysis ({selectedFiles.size} files)
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Analysis Results Modal */}
-        <Dialog open={showAnalysisModal} onOpenChange={(open) => {
-          setShowAnalysisModal(open);
-          if (!open) {
-            // Reset states when modal closes
-            setSelectedFiles(new Set());
-            setRepoFiles({});
-            setAllFiles([]);
-            setCurrentAnalysisRepo(null);
-            setAnalysisResult("");
-            setIsAnalyzing(false);
-          }
-        }}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                Analysis Report - {currentAnalysisRepo?.name}
-                {isAnalyzing && (
-                  <div className="flex items-center text-sm text-muted-foreground ml-auto">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-                    Analyzing...
-                  </div>
-                )}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="mt-4">
-              {analysisResult ? (
-                <div className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg">
-                  {formatAnalysis(analysisResult)}
-                </div>
-              ) : isAnalyzing ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">Analyzing your code...</p>
-                  <p className="text-sm text-muted-foreground mt-2">This may take a few moments</p>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">No analysis available</p>
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   );
