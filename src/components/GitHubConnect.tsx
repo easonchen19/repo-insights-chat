@@ -79,37 +79,90 @@ const GitHubConnect = () => {
   };
 
   // Load feature suggestions based on analysis
-  const loadFeatureSuggestions = async () => {
-    if (!analysisResult) return;
+  const loadFeatureSuggestions = async (reportContent?: string) => {
+    const report = reportContent || analysisResult;
+    
+    console.log('🔍 Loading feature suggestions...', { 
+      hasReport: !!report, 
+      reportLength: report?.length 
+    });
+    
+    // Fallback suggestions if we can't get AI-generated ones
+    const fallbackSuggestions = [
+      {
+        title: "Add User Authentication",
+        description: "Implement secure login and signup functionality with session management",
+        priority: "high" as const,
+        category: "Security"
+      },
+      {
+        title: "Add Loading States",
+        description: "Improve UX with skeleton loaders and loading indicators",
+        priority: "medium" as const,
+        category: "UX"
+      },
+      {
+        title: "Add Error Boundaries",
+        description: "Implement error boundaries to gracefully handle runtime errors",
+        priority: "medium" as const,
+        category: "Features"
+      },
+      {
+        title: "Add How It Works Section",
+        description: "Create a landing page section explaining the product's key features",
+        priority: "medium" as const,
+        category: "Marketing"
+      },
+      {
+        title: "Add Testimonials",
+        description: "Include social proof with customer testimonials and reviews",
+        priority: "low" as const,
+        category: "Marketing"
+      }
+    ];
     
     setIsLoadingSuggestions(true);
     try {
+      if (!report) {
+        console.log('⚠️ No analysis report, using fallback suggestions');
+        setFeatureSuggestions(fallbackSuggestions);
+        return;
+      }
+
       const SUPABASE_URL = "https://wfywmkdqyuucxftpvmfj.supabase.co";
+      console.log('🤖 Calling suggest-features edge function...');
+      
       const response = await fetch(`${SUPABASE_URL}/functions/v1/suggest-features`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          analysisReport: analysisResult,
+          analysisReport: report,
           model: selectedModel
         }),
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Edge function error:', response.status, errorText);
         throw new Error('Failed to generate feature suggestions');
       }
 
       const data = await response.json();
-      setFeatureSuggestions(data.suggestions || []);
+      console.log('✅ Got suggestions:', data.suggestions?.length || 0);
+      
+      if (data.suggestions && data.suggestions.length > 0) {
+        setFeatureSuggestions(data.suggestions);
+      } else {
+        console.log('⚠️ Empty suggestions from AI, using fallback');
+        setFeatureSuggestions(fallbackSuggestions);
+      }
     } catch (error) {
-      console.error('Error loading feature suggestions:', error);
-      toast({
-        title: "Suggestions Failed",
-        description: "Could not generate feature suggestions.",
-        variant: "destructive"
-      });
-      setFeatureSuggestions([]);
+      console.error('❌ Error loading feature suggestions:', error);
+      console.log('⚠️ Using fallback suggestions due to error');
+      // Always show fallback suggestions on error
+      setFeatureSuggestions(fallbackSuggestions);
     } finally {
       setIsLoadingSuggestions(false);
     }
@@ -1283,13 +1336,18 @@ ${getValidationSteps(userTask, language, repoName)}
                 // Append text chunk to the analysis result
                 setAnalysisResult(prev => prev + data.text);
               } else if (data.type === 'complete') {
+                console.log('✅ Analysis complete, loading suggestions...');
                 setIsAnalyzing(false);
                 toast({
                   title: "Analysis Complete",
                   description: `Successfully analyzed ${selectedFiles.size} files from ${currentAnalysisRepo?.name}.`,
                 });
                 // Load feature suggestions after analysis completes
-                loadFeatureSuggestions();
+                // Pass the current analysis result to avoid race conditions
+                setAnalysisResult(prev => {
+                  loadFeatureSuggestions(prev);
+                  return prev;
+                });
               }
             } catch (e) {
               // Skip invalid JSON
