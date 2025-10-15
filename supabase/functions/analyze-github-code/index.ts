@@ -522,10 +522,10 @@ Provide severity ratings (🔴 CRITICAL, 🟡 WARNING, ℹ️ INFO) with specifi
     const userPrompt = `Review this codebase and provide detailed senior engineer analysis:
 
 **Repository:** ${repoName}
-**Files Analyzed:** ${filesData.length} 
-**Selected Files:** ${filesData.map(f => f.path).join(', ')}
+**Files Analyzed:** ${limited.length} 
+**Selected Files:** ${limited.map(f => f.path).join(', ')}
 
-${formattedKnowledge}
+${knowledgeSection}
 
 Include: overall quality rating (1-10), code duplication issues, file structure assessment, critical issues with severity, and specific improvements with code examples.`;
 
@@ -553,7 +553,7 @@ Include: overall quality rating (1-10), code duplication issues, file structure 
           temperature: 0.5,
           stream: true, // Enable streaming
           messages: [
-            { role: 'user', content: userContent }
+            { role: 'user', content: `${systemPrompt}\n\n${userPrompt}` }
           ],
         }),
       });
