@@ -1356,8 +1356,6 @@ ${getValidationSteps(userTask, language, repoName)}
                 setAnalysisResult(prev => prev + data.text);
               } else if (data.type === 'complete') {
                 console.log('✅ Analysis complete, loading suggestions...');
-                const actualFileCount = data.fileCount || payloadFiles.length;
-                console.log(`📊 Actual files analyzed: ${actualFileCount}`);
                 setIsAnalyzing(false);
                 
                 // Get the final analysis result and load suggestions
@@ -1372,7 +1370,7 @@ ${getValidationSteps(userTask, language, repoName)}
                     
                     toast({
                       title: "Analysis Complete",
-                      description: `Analyzed ${actualFileCount} files.`,
+                      description: `Analyzed ${payloadFiles.length} files from your selection.`,
                     });
                   }, 100);
                   

@@ -37,12 +37,6 @@ serve(async (req) => {
 
     const systemPrompt = `You are a product strategist and senior engineer. Analyze the code review report and prioritize feature suggestions based on the findings.
 
-**CRITICAL: Before suggesting any feature, CHECK if it already exists in the codebase:**
-- If authentication/login/signup is already implemented → DO NOT suggest auth features
-- If payment/Stripe integration exists → DO NOT suggest payment features  
-- If a feature is already present → DO NOT suggest it again
-- Only suggest features that are clearly MISSING or need significant improvement
-
 **Prioritization Rules:**
 1. If CRITICAL security issues found → Prioritize security/auth features
 2. If performance issues found → Prioritize optimization features
@@ -70,23 +64,18 @@ Return ONLY a JSON array (3-5 suggestions) with this exact structure:
 Each suggestion must be:
 - Specific and actionable
 - Based on actual findings in the report
-- NOT already implemented in the codebase
 - Implementable as a discrete task`;
 
     const userPrompt = `Based on this senior engineer code review, suggest 3-5 prioritized features/improvements:
 
 ${analysisReport}
 
-**IMPORTANT INSTRUCTIONS:**
-1. First, carefully check what features ALREADY EXIST in the codebase by reading the analysis report
-2. DO NOT suggest features that are already implemented (like auth, payments, etc.)
-3. Only suggest features that are clearly MISSING or need major improvements
-4. Prioritize based on:
-   - Critical/security issues mentioned
-   - Missing core functionality
-   - Architecture/structure problems
-   - Performance bottlenecks
-   - UX improvements
+Prioritize based on:
+1. Critical/security issues mentioned
+2. Missing core functionality
+3. Architecture/structure problems
+4. Performance bottlenecks
+5. UX improvements
 
 Return ONLY the JSON array, no other text.`;
 
