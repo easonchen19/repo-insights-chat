@@ -78,94 +78,65 @@ const GitHubConnect = () => {
     }
   };
 
-  // Load feature suggestions based on analysis
-  const loadFeatureSuggestions = async (reportContent?: string) => {
-    const report = reportContent || analysisResult;
-    
-    console.log('🔍 Loading feature suggestions...', { 
-      hasReport: !!report, 
-      reportLength: report?.length 
-    });
-    
-    // Fallback suggestions if we can't get AI-generated ones
-    const fallbackSuggestions = [
-      {
-        title: "Add User Authentication",
-        description: "Implement secure login and signup functionality with session management",
-        priority: "high" as const,
-        category: "Security"
-      },
-      {
-        title: "Add Loading States",
-        description: "Improve UX with skeleton loaders and loading indicators",
-        priority: "medium" as const,
-        category: "UX"
-      },
-      {
-        title: "Add Error Boundaries",
-        description: "Implement error boundaries to gracefully handle runtime errors",
-        priority: "medium" as const,
-        category: "Features"
-      },
-      {
-        title: "Add How It Works Section",
-        description: "Create a landing page section explaining the product's key features",
-        priority: "medium" as const,
-        category: "Marketing"
-      },
-      {
-        title: "Add Testimonials",
-        description: "Include social proof with customer testimonials and reviews",
-        priority: "low" as const,
-        category: "Marketing"
-      }
-    ];
-    
-    setIsLoadingSuggestions(true);
-    try {
-      if (!report) {
-        console.log('⚠️ No analysis report, using fallback suggestions');
-        setFeatureSuggestions(fallbackSuggestions);
-        return;
-      }
-
-      const SUPABASE_URL = "https://wfywmkdqyuucxftpvmfj.supabase.co";
-      console.log('🤖 Calling suggest-features edge function...');
-      
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/suggest-features`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          analysisReport: report,
-          model: selectedModel
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Edge function error:', response.status, errorText);
-        throw new Error('Failed to generate feature suggestions');
-      }
-
-      const data = await response.json();
-      console.log('✅ Got suggestions:', data.suggestions?.length || 0);
-      
-      if (data.suggestions && data.suggestions.length > 0) {
-        setFeatureSuggestions(data.suggestions);
-      } else {
-        console.log('⚠️ Empty suggestions from AI, using fallback');
-        setFeatureSuggestions(fallbackSuggestions);
-      }
-    } catch (error) {
-      console.error('❌ Error loading feature suggestions:', error);
-      console.log('⚠️ Using fallback suggestions due to error');
-      // Always show fallback suggestions on error
-      setFeatureSuggestions(fallbackSuggestions);
-    } finally {
-      setIsLoadingSuggestions(false);
+  // Default feature suggestions for quick demo
+  const getDefaultSuggestions = () => [
+    {
+      title: "Add User Authentication",
+      description: "Implement secure login and signup with email/password or social providers",
+      priority: "high" as const,
+      category: "Security"
+    },
+    {
+      title: "Add Payment Integration",
+      description: "Integrate Stripe for one-time payments or subscriptions",
+      priority: "high" as const,
+      category: "Features"
+    },
+    {
+      title: "Add Testimonials Section",
+      description: "Showcase customer reviews and social proof on landing page",
+      priority: "medium" as const,
+      category: "Marketing"
+    },
+    {
+      title: "Add How It Works Section",
+      description: "Explain your product's key features and workflow visually",
+      priority: "medium" as const,
+      category: "Marketing"
+    },
+    {
+      title: "Add Loading States",
+      description: "Improve UX with skeleton loaders and loading indicators",
+      priority: "medium" as const,
+      category: "UX"
+    },
+    {
+      title: "Add Error Boundaries",
+      description: "Implement error boundaries to gracefully handle runtime errors",
+      priority: "low" as const,
+      category: "Features"
+    },
+    {
+      title: "Add Dark Mode Toggle",
+      description: "Allow users to switch between light and dark themes",
+      priority: "low" as const,
+      category: "UI"
+    },
+    {
+      title: "Add API Rate Limiting",
+      description: "Protect your backend with rate limiting and request throttling",
+      priority: "medium" as const,
+      category: "Security"
     }
+  ];
+
+  // Load feature suggestions - now shows immediately without analysis
+  const loadFeatureSuggestions = async () => {
+    console.log('🔍 Loading feature suggestions (quick demo mode)');
+    
+    // Show default suggestions immediately
+    setFeatureSuggestions(getDefaultSuggestions());
+    console.log('✅ Loaded default feature suggestions');
   };
 
   // Handle clicking on a feature suggestion
@@ -175,6 +146,16 @@ const GitHubConnect = () => {
     setGeneratedPrompt("");
     
     try {
+      console.log('🤖 Generating prompt for:', suggestion.title);
+      
+      // Build context from available data
+      const codebaseContext = {
+        repoName: currentAnalysisRepo?.name || 'your project',
+        language: currentAnalysisRepo?.language || 'TypeScript/React',
+        description: currentAnalysisRepo?.description || 'web application',
+        analysis: analysisResult || 'No analysis available yet'
+      };
+      
       const SUPABASE_URL = "https://wfywmkdqyuucxftpvmfj.supabase.co";
       const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-prompt`, {
         method: 'POST',
@@ -183,12 +164,7 @@ const GitHubConnect = () => {
         },
         body: JSON.stringify({
           feature: `${suggestion.title}: ${suggestion.description}`,
-          codebaseInfo: {
-            analysis: analysisResult,
-            repoName: currentAnalysisRepo?.name,
-            language: currentAnalysisRepo?.language,
-            description: currentAnalysisRepo?.description
-          },
+          codebaseInfo: codebaseContext,
           model: selectedModel
         }),
       });
@@ -200,12 +176,13 @@ const GitHubConnect = () => {
       const data = await response.json();
       setGeneratedPrompt(data.generatedPrompt);
       
+      console.log('✅ Prompt generated successfully');
       toast({
         title: "Prompt Generated!",
-        description: "Click to copy the prompt for this feature.",
+        description: "Ready to copy and use in your AI assistant.",
       });
     } catch (error) {
-      console.error('Error generating prompt:', error);
+      console.error('❌ Error generating prompt:', error);
       toast({
         title: "Generation Failed",
         description: "Could not generate prompt for this feature.",
@@ -1188,6 +1165,8 @@ ${getValidationSteps(userTask, language, repoName)}
         // Enter analyzing mode instead of showing modal
         setIsAnalyzingMode(true);
         setAnalysisResult(""); // Clear previous results
+        // Load feature suggestions immediately for quick demo
+        loadFeatureSuggestions();
       }
     } catch (error: any) {
       console.error('Error analyzing repository:', error);
@@ -1343,11 +1322,7 @@ ${getValidationSteps(userTask, language, repoName)}
                   description: `Successfully analyzed ${selectedFiles.size} files from ${currentAnalysisRepo?.name}.`,
                 });
                 // Load feature suggestions after analysis completes
-                // Pass the current analysis result to avoid race conditions
-                setAnalysisResult(prev => {
-                  loadFeatureSuggestions(prev);
-                  return prev;
-                });
+                loadFeatureSuggestions();
               }
             } catch (e) {
               // Skip invalid JSON
@@ -1759,107 +1734,38 @@ ${getValidationSteps(userTask, language, repoName)}
                   {/* Left Panel - File Selection or Feature Suggestions */}
                   <ResizablePanel defaultSize={40} minSize={30}>
                     <div className="h-full flex flex-col p-6 bg-background">
-                      {!isAnalyzing && !analysisResult ? (
-                        // Show File Selection BEFORE analysis
-                        <>
-                          <div className="mb-4">
-                            <h2 className="text-xl font-semibold mb-1">Select Files to Analyze</h2>
-                            <p className="text-sm text-muted-foreground">{currentAnalysisRepo?.name}</p>
-                          </div>
-
-                      {/* Select All Controls */}
-                      <div className="flex items-center justify-between mb-4 p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="select-all"
-                            checked={selectedFiles.size === allFiles.length && allFiles.length > 0}
-                            onCheckedChange={handleSelectAll}
-                          />
-                          <label htmlFor="select-all" className="font-medium text-sm">
-                            Select All ({selectedFiles.size}/{allFiles.length} files)
-                          </label>
-                        </div>
+                      {/* Always show feature suggestions in demo mode */}
+                      <div className="mb-6">
+                        <h2 className="text-xl font-semibold mb-1">Quick Feature Suggestions</h2>
+                        <p className="text-sm text-muted-foreground">
+                          Click any feature to generate an AI prompt
+                        </p>
                       </div>
 
-                      {/* File List */}
-                      <ScrollArea className="flex-1 border rounded-lg">
-                        <div className="p-4 space-y-4">
-                          {Object.entries(repoFiles).map(([folderName, files]) => (
-                            <div key={folderName} className="space-y-2">
-                              <div className="text-sm font-semibold text-muted-foreground bg-muted/30 px-2 py-1 rounded">
-                                📁 {folderName === 'root' ? '(Root Directory)' : folderName} ({files.length} files)
-                              </div>
-                              {files.map((file, index) => (
-                                <div 
-                                  key={`${folderName}-${index}`}
-                                  className="flex items-center space-x-3 p-2 ml-4 hover:bg-muted/50 rounded transition-colors"
-                                >
-                                  <Checkbox
-                                    id={`file-${folderName}-${index}`}
-                                    checked={selectedFiles.has(file.path)}
-                                    onCheckedChange={(checked) => handleFileSelection(file.path, checked as boolean)}
-                                  />
-                                  <div className="flex-1">
-                                    <div className="text-sm font-medium truncate">
-                                      {folderName === 'root' ? file.path : file.path.split('/').slice(1).join('/')}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {file.type} • {file.content ? `${file.content.length} chars` : 'Empty'}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-
-                          {/* Start Analysis Button */}
-                          <div className="mt-4 pt-4 border-t">
-                            <Button 
-                              variant="hero"
-                              onClick={handleStartAnalysis}
-                              disabled={selectedFiles.size === 0 || isAnalyzing}
-                              className="w-full"
-                            >
-                              {isAnalyzing ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  Analyzing...
-                                </>
-                              ) : (
-                                `Start Analysis (${selectedFiles.size} files)`
-                              )}
-                            </Button>
+                      <ScrollArea className="flex-1">
+                        {isLoadingSuggestions ? (
+                          <div className="flex flex-col items-center justify-center h-full space-y-4">
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                            <p className="text-sm text-muted-foreground">Loading suggestions...</p>
                           </div>
-                        </>
-                      ) : (
-                        // Show Feature Suggestions AFTER analysis
-                        <ScrollArea className="h-full">
-                          {isLoadingSuggestions ? (
-                            <div className="flex flex-col items-center justify-center h-full space-y-4">
-                              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                              <p className="text-sm text-muted-foreground">Generating feature suggestions...</p>
+                        ) : featureSuggestions.length > 0 ? (
+                          <FeatureSuggestions 
+                            suggestions={featureSuggestions}
+                            onSuggestionClick={handleSuggestionClick}
+                            isGenerating={isGenerating}
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full space-y-4 text-center px-4">
+                            <Lightbulb className="w-12 h-12 text-muted-foreground/50" />
+                            <div>
+                              <h3 className="font-semibold mb-2">Loading Features...</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Feature suggestions will appear here
+                              </p>
                             </div>
-                          ) : featureSuggestions.length > 0 ? (
-                            <FeatureSuggestions 
-                              suggestions={featureSuggestions}
-                              onSuggestionClick={handleSuggestionClick}
-                              isGenerating={isGenerating}
-                            />
-                          ) : (
-                            <div className="flex flex-col items-center justify-center h-full space-y-4 text-center px-4">
-                              <Lightbulb className="w-12 h-12 text-muted-foreground/50" />
-                              <div>
-                                <h3 className="font-semibold mb-2">No Suggestions Available</h3>
-                                <p className="text-sm text-muted-foreground">
-                                  Complete the analysis to see feature suggestions
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </ScrollArea>
-                      )}
+                          </div>
+                        )}
+                      </ScrollArea>
                     </div>
                   </ResizablePanel>
 
