@@ -294,7 +294,40 @@ function analyzeCodebase(files: SafeFile[]): CodebaseKnowledge {
   };
 }
 
+function generateComponentDiagram(knowledge: CodebaseKnowledge): string {
+  const internalDeps = knowledge.dependencies.internal;
+  const nodes = new Set<string>();
+  const connections: string[] = [];
+  
+  // Extract unique nodes and connections
+  for (const [file, imports] of Object.entries(internalDeps)) {
+    // Get simplified file names (last part of path without extension)
+    const fileName = file.split('/').pop()?.replace(/\.(ts|tsx|js|jsx)$/, '') || file;
+    nodes.add(fileName);
+    
+    for (const imp of imports) {
+      // Resolve relative imports to file names
+      const importName = imp.split('/').pop()?.replace(/\.(ts|tsx|js|jsx)$/, '') || imp;
+      if (importName && importName !== fileName) {
+        nodes.add(importName);
+        connections.push(`    ${fileName} --> ${importName}`);
+      }
+    }
+  }
+  
+  // Limit diagram size for readability
+  const limitedConnections = connections.slice(0, 30);
+  
+  if (limitedConnections.length === 0) {
+    return '';
+  }
+  
+  return `\n### 🏛️ Component Structure Diagram\n\n<lov-mermaid>\ngraph TD\n${limitedConnections.join('\n')}\n</lov-mermaid>\n\n`;
+}
+
 function formatCodebaseKnowledge(knowledge: CodebaseKnowledge): string {
+  const componentDiagram = generateComponentDiagram(knowledge);
+  
   return `## 📊 CODEBASE KNOWLEDGE ANALYSIS
 
 ### 🏗️ Project Structure
@@ -310,6 +343,8 @@ function formatCodebaseKnowledge(knowledge: CodebaseKnowledge): string {
   .slice(0, 8)
   .map(([ext, count]) => `${ext} (${count})`)
   .join(', ')}
+
+${componentDiagram}
 
 ### 🔗 Dependencies Analysis
 - **External Dependencies**: ${knowledge.dependencies.external.length} packages
