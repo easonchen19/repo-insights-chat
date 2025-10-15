@@ -589,7 +589,12 @@ Include: overall quality rating (1-10), code duplication issues, file structure 
 
           while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) {
+              // Send completion signal when stream is done
+              console.log('✅ Stream complete, sending completion signal');
+              controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ type: 'complete' })}\n\n`));
+              break;
+            }
 
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split('\n');
@@ -599,8 +604,6 @@ Include: overall quality rating (1-10), code duplication issues, file structure 
               if (line.startsWith('data: ')) {
                 const data = line.slice(6);
                 if (data === '[DONE]') {
-                  // Send completion signal
-                  controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ type: 'complete' })}\n\n`));
                   continue;
                 }
 
@@ -610,6 +613,10 @@ Include: overall quality rating (1-10), code duplication issues, file structure 
                     // Stream the text chunk
                     const chunk = { type: 'delta', text: parsed.delta.text };
                     controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunk)}\n\n`));
+                  } else if (parsed.type === 'message_stop') {
+                    // Claude sends message_stop when done
+                    console.log('✅ Message complete, sending completion signal');
+                    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ type: 'complete' })}\n\n`));
                   }
                 } catch (e) {
                   // Skip invalid JSON
