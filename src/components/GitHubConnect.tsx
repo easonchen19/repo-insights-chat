@@ -17,8 +17,6 @@ import { useNavigate } from "react-router-dom";
 import { ModelSelector, useModelSelection } from "@/components/ModelSelector";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { FeatureSuggestions } from "@/components/FeatureSuggestions";
-import { ScrollablePanel } from "@/components/ScrollablePanel";
-import { AnalyzerLayout } from "@/components/AnalyzerLayout";
 
 interface Repository {
   id: number;
@@ -1909,6 +1907,9 @@ ${getValidationSteps(userTask, language, repoName)}
                   )
                 }
               />
+            ) : (
+              <>
+                {repositories.length > 0 && (
 
                 <div className="grid gap-4">
                   {filteredRepos.map((repo) => (
@@ -2020,7 +2021,7 @@ ${getValidationSteps(userTask, language, repoName)}
                                         </>
                                       )}
                                     </Button>
-                                  </div>
+          </div>
 
                                   {/* Generated Prompt Section */}
                                   {generatedPrompt && (
@@ -2110,8 +2111,8 @@ ${getValidationSteps(userTask, language, repoName)}
                                          </div>
                                        ))}
                                      </div>
-                                   </div>
-                                  
+              </>
+
                                   <Separator />
                                   
                                   <div className="space-y-3">
