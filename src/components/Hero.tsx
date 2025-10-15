@@ -50,19 +50,19 @@ const Hero = () => {
         </div>
         
         <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-vibe bg-clip-text text-transparent animate-pulse">
-          Stop AI hallucinations in Cursor/Lovable.
+          From code to prompt.
           <br />
-          <span className="text-4xl md:text-6xl">Paste repo-aware prompts that just work.</span>
+          <span className="text-4xl md:text-6xl">The best partner to Lovable.</span>
         </h1>
         
         <p className="text-xl text-foreground/80 mb-8 max-w-2xl mx-auto leading-relaxed">
-          We parse your repo, find the right files/functions, and generate prompts that guide AI to correct, runnable code.
+          Lovable turns prompts into code. Lovable Mate turns your code into perfect prompts.
         </p>
         
         <div className="mb-12 inline-flex items-center gap-3 bg-card/60 backdrop-blur-xl rounded-full px-8 py-4 text-lg font-medium border border-primary/30 shadow-glow">
           <Brain className="w-6 h-6 text-primary animate-pulse" />
           <span className="bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
-            We are your AI coding partner - translating your codebase to real knowledge and prompts
+            Analyze your codebase. Generate repo-aware prompts. Build faster.
           </span>
         </div>
         
