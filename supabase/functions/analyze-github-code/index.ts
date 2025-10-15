@@ -465,11 +465,13 @@ serve(async (req) => {
       });
 
     if (sanitized.length === 0) {
-      return new Response(JSON.stringify({ error: 'No valid files with content provided' }), {
+      return new Response(JSON.stringify({ error: 'No valid core files found. Please select files from src/, components/, pages/, or config files.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log(`📊 Analysis: ${files.length} files received → ${sanitized.length} core files after filtering`);
 
     // Apply smart truncation focusing on core code sections
     const limited: SafeFile[] = [];
@@ -493,7 +495,7 @@ serve(async (req) => {
     }
 
     // Generate codebase knowledge analysis
-    console.log('🔍 Generating codebase knowledge analysis...');
+    console.log(`🔍 Generating codebase knowledge analysis for ${limited.length} files (from ${files.length} received)...`);
     const codebaseKnowledge = analyzeCodebase(limited);
     const knowledgeSection = formatCodebaseKnowledge(codebaseKnowledge);
 

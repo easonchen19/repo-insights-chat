@@ -1293,6 +1293,8 @@ ${getValidationSteps(userTask, language, repoName)}
         selectedFiles.has(file.path)
       );
 
+      console.log(`📊 Analysis starting with ${selectedFiles.size} selected files`);
+
       // Apply client-side limits to avoid oversized request payloads
       const MAX_FILES = 40;
       const MAX_CHARS_PER_FILE = 4000;
@@ -1308,6 +1310,8 @@ ${getValidationSteps(userTask, language, repoName)}
         remaining -= content.length;
         payloadFiles.push({ path: f.path || f.name, content, type: f.type });
       }
+
+      console.log(`📤 Sending ${payloadFiles.length} files to analysis (${selectedFiles.size} selected → ${payloadFiles.length} after size limits)`);
 
       if (payloadFiles.length === 0) {
         throw new Error('Selected files are empty or too large to analyze. Try selecting fewer files.');
@@ -1366,7 +1370,7 @@ ${getValidationSteps(userTask, language, repoName)}
                     
                     toast({
                       title: "Analysis Complete",
-                      description: `Successfully analyzed ${selectedFiles.size} files. Feature suggestions ready!`,
+                      description: `Analyzed ${payloadFiles.length} files from your selection.`,
                     });
                   }, 100);
                   
