@@ -1800,7 +1800,7 @@ ${getValidationSteps(userTask, language, repoName)}
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={handleSelectAll}
+                                  onClick={() => handleSelectAll(selectedFiles.size !== allFiles.length)}
                                 >
                                   {selectedFiles.size === allFiles.length ? 'Deselect All' : 'Select All'}
                                 </Button>
@@ -1821,7 +1821,7 @@ ${getValidationSteps(userTask, language, repoName)}
                                         <input
                                           type="checkbox"
                                           checked={selectedFiles.has(file.path)}
-                                          onChange={() => handleFileSelection(file.path)}
+                                          onChange={(e) => handleFileSelection(file.path, e.target.checked)}
                                           className="rounded"
                                         />
                                         <span className="text-sm truncate flex-1">{file.name}</span>
