@@ -132,16 +132,18 @@ const GitHubConnect = () => {
 
   // Load feature suggestions based on analysis report
   const loadFeatureSuggestions = async (reportContent: string) => {
-    console.log('🎯 Loading feature suggestions based on analysis...');
+    console.log('🎯 Loading feature suggestions based on analysis...', 
+                'Report length:', reportContent?.length || 0);
     
-    if (!reportContent) {
-      console.log('⚠️ No analysis report, using default suggestions');
+    if (!reportContent || reportContent.trim().length < 100) {
+      console.log('⚠️ No sufficient analysis report, using default suggestions');
       setFeatureSuggestions(getDefaultSuggestions());
       return;
     }
 
     try {
       setIsGenerating(true);
+      console.log('📡 Calling suggest-features edge function...');
       
       const { data, error } = await supabase.functions.invoke('suggest-features', {
         body: { 
@@ -155,8 +157,10 @@ const GitHubConnect = () => {
         throw error;
       }
 
+      console.log('📦 Response from suggest-features:', data);
+
       if (data?.suggestions && Array.isArray(data.suggestions) && data.suggestions.length > 0) {
-        console.log('✅ Received AI-generated suggestions:', data.suggestions);
+        console.log('✅ Received AI-generated suggestions:', data.suggestions.length, 'items');
         setFeatureSuggestions(data.suggestions);
       } else {
         console.log('⚠️ No suggestions in response, using defaults');
@@ -167,6 +171,7 @@ const GitHubConnect = () => {
       setFeatureSuggestions(getDefaultSuggestions());
     } finally {
       setIsGenerating(false);
+      console.log('✅ Feature suggestion loading complete');
     }
   };
 
@@ -1347,13 +1352,23 @@ ${getValidationSteps(userTask, language, repoName)}
               } else if (data.type === 'complete') {
                 console.log('✅ Analysis complete, loading suggestions...');
                 setIsAnalyzing(false);
-                toast({
-                  title: "Analysis Complete",
-                  description: `Successfully analyzed ${selectedFiles.size} files from ${currentAnalysisRepo?.name}.`,
-                });
-                // Load feature suggestions with the completed analysis
+                
+                // Get the final analysis result and load suggestions
                 setAnalysisResult(prev => {
-                  loadFeatureSuggestions(prev);
+                  const finalReport = prev;
+                  console.log('📄 Final report length:', finalReport.length);
+                  
+                  // Load suggestions asynchronously after state update
+                  setTimeout(async () => {
+                    console.log('🎯 Starting feature suggestion generation...');
+                    await loadFeatureSuggestions(finalReport);
+                    
+                    toast({
+                      title: "Analysis Complete",
+                      description: `Successfully analyzed ${selectedFiles.size} files. Feature suggestions ready!`,
+                    });
+                  }, 100);
+                  
                   return prev;
                 });
               }
@@ -1767,7 +1782,27 @@ ${getValidationSteps(userTask, language, repoName)}
                   {/* Left Panel - File Selection or Feature Suggestions */}
                   <ResizablePanel defaultSize={40} minSize={30}>
                     <div className="h-full flex flex-col p-6 bg-background">
-                      {featureSuggestions.length > 0 ? (
+                      {isGenerating && featureSuggestions.length === 0 ? (
+                        // Loading suggestions state
+                        <>
+                          <div className="mb-6">
+                            <h2 className="text-xl font-semibold mb-1">Generating Suggestions</h2>
+                            <p className="text-sm text-muted-foreground">
+                              Analyzing your code to suggest improvements...
+                            </p>
+                          </div>
+                          
+                          <div className="flex-1 flex items-center justify-center">
+                            <div className="text-center space-y-4">
+                              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                              <p className="text-sm text-muted-foreground">
+                                Creating personalized feature suggestions...
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      ) : featureSuggestions.length > 0 ? (
+                        // Show suggestions
                         <>
                           <div className="mb-6">
                             <h2 className="text-xl font-semibold mb-1">Feature Suggestions</h2>
@@ -1785,6 +1820,7 @@ ${getValidationSteps(userTask, language, repoName)}
                           </ScrollArea>
                         </>
                       ) : (
+                        // Show file selection
                         <>
                           <div className="mb-6">
                             <h2 className="text-xl font-semibold mb-1">Select Files to Analyze</h2>
