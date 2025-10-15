@@ -44,7 +44,9 @@ const Hero = () => {
             : 'bg-muted/30 border-muted/50'
         }`}>
           <img src={lovableMateLogoUrl} alt="Lovable Mate Logo" className="w-6 h-6" />
-          <span className="font-medium bg-gradient-vibe bg-clip-text text-transparent">Lovable mate</span>
+          <span className="font-medium bg-gradient-vibe bg-clip-text text-transparent">
+            Lovable Mate: From code to prompt
+          </span>
         </div>
         
         <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-vibe bg-clip-text text-transparent animate-pulse">
