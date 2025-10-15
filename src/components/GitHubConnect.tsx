@@ -2133,19 +2133,18 @@ ${getValidationSteps(userTask, language, repoName)}
                       </div>
                     </Card>
                   ))}
-                </div>
               </>
             )}
 
-            {repositories.length === 0 && !isLoading && isConnected && (
-              <Card className="p-12 text-center">
-                <Github className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No repositories loaded</h3>
-                <p className="text-muted-foreground mb-4">
-                  Click "Show GitHub Repos" to load your accessible repositories
-                </p>
-              </Card>
-            )}
+                {repositories.length === 0 && !isLoading && isConnected && (
+                  <Card className="p-12 text-center">
+                    <Github className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No repositories loaded</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Click "Show GitHub Repos" to load your accessible repositories
+                    </p>
+                  </Card>
+                )}
 
             {filteredRepos.length === 0 && searchTerm && repositories.length > 0 && !isLoading && (
               <Card className="p-12 text-center">
