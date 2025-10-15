@@ -498,53 +498,36 @@ serve(async (req) => {
     const knowledgeSection = formatCodebaseKnowledge(codebaseKnowledge);
 
     // Build prompt optimized for junior engineers and product managers
-    const header = `Analyze this ${repoName || 'project'} codebase and create a comprehensive report for junior engineers and product managers.
+    const systemPrompt = `You are a senior software engineer with 15+ years of experience conducting comprehensive code reviews.
 
-IMPORTANT: Focus only on the core functionality shown in the code. Do not make assumptions about features not present.
+Analyze the codebase focusing on:
 
-Structure your analysis as follows:
+**CODE QUALITY**
+- Code duplication and redundancy  
+- Readability and maintainability
+- Naming conventions and documentation
 
-## 📋 PROJECT SUMMARY
-- Brief description of what this application does
-- Main user-facing features (based on actual code)
-- Technology stack overview
+**ARCHITECTURE & STRUCTURE**  
+- File/folder organization (frontend, backend, db, api should be separate)
+- Separation of concerns
+- Component/module boundaries
 
-## 🏗️ ARCHITECTURE OVERVIEW  
-- High-level architecture pattern used
-- Key directories and their purposes
-- Data flow between components
-- Backend/API structure (if present)
+**BEST PRACTICES**
+- Security vulnerabilities
+- Performance bottlenecks  
+- Error handling
 
-## 🔧 KEY COMPONENTS
-- Most important files/components and what they do
-- Main user flows through the application
-- Critical business logic locations
+Provide severity ratings (🔴 CRITICAL, 🟡 WARNING, ℹ️ INFO) with specific examples and actionable recommendations.`;
 
-## 📊 CODE QUALITY ASSESSMENT
-- Overall code maintainability (1-10 scale with explanation)
-- Security considerations found
-- Performance observations
-- Code organization strengths/weaknesses
+    const userPrompt = `Review this codebase and provide detailed senior engineer analysis:
 
-## 🎯 PRIORITY RECOMMENDATIONS
-List 3-5 actionable recommendations in order of business impact:
-1. High impact, low effort improvements
-2. Security or performance critical fixes
-3. Code organization improvements
-4. Feature enhancement opportunities
+**Repository:** ${repoName}
+**Files Analyzed:** ${filesData.length} 
+**Selected Files:** ${filesData.map(f => f.path).join(', ')}
 
-## 🚀 NEXT STEPS FOR DEVELOPMENT
-- Immediate action items for developers
-- Suggested development workflow improvements
-- Areas needing technical debt cleanup
+${formattedKnowledge}
 
-Keep explanations clear for non-technical stakeholders while being specific enough for developers to act on.`;
-
-    const codeSections = limited
-      .map((f) => `FILE: ${f.path}\nTYPE: ${f.type || 'text'}\n-----\n${f.content}\n\n`)
-      .join("\n\n");
-
-    const userContent = `${header}\n\n${codeSections}`;
+Include: overall quality rating (1-10), code duplication issues, file structure assessment, critical issues with severity, and specific improvements with code examples.`;
 
     console.log('📦 analyze-github-code: files received:', files.length, 'valid:', sanitized.length, 'limited:', limited.length, 'budgetLeft:', remaining);
 

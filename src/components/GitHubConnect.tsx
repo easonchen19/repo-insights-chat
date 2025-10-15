@@ -130,13 +130,44 @@ const GitHubConnect = () => {
     }
   ];
 
-  // Load feature suggestions - now shows immediately without analysis
-  const loadFeatureSuggestions = async () => {
-    console.log('🔍 Loading feature suggestions (quick demo mode)');
+  // Load feature suggestions based on analysis report
+  const loadFeatureSuggestions = async (reportContent: string) => {
+    console.log('🎯 Loading feature suggestions based on analysis...');
     
-    // Show default suggestions immediately
-    setFeatureSuggestions(getDefaultSuggestions());
-    console.log('✅ Loaded default feature suggestions');
+    if (!reportContent) {
+      console.log('⚠️ No analysis report, using default suggestions');
+      setFeatureSuggestions(getDefaultSuggestions());
+      return;
+    }
+
+    try {
+      setIsGenerating(true);
+      
+      const { data, error } = await supabase.functions.invoke('suggest-features', {
+        body: { 
+          analysisReport: reportContent,
+          model: selectedModel 
+        }
+      });
+
+      if (error) {
+        console.error('❌ Error from suggest-features:', error);
+        throw error;
+      }
+
+      if (data?.suggestions && Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+        console.log('✅ Received AI-generated suggestions:', data.suggestions);
+        setFeatureSuggestions(data.suggestions);
+      } else {
+        console.log('⚠️ No suggestions in response, using defaults');
+        setFeatureSuggestions(getDefaultSuggestions());
+      }
+    } catch (error) {
+      console.error('❌ Error loading suggestions:', error);
+      setFeatureSuggestions(getDefaultSuggestions());
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   // Handle clicking on a feature suggestion
@@ -1162,11 +1193,10 @@ ${getValidationSteps(userTask, language, repoName)}
         // Select all files by default (only valid ones)
         const allFilePaths = normalizedFiles.map((file: any) => file.path);
         setSelectedFiles(new Set(allFilePaths));
-        // Enter analyzing mode instead of showing modal
+        // Enter analyzing mode
         setIsAnalyzingMode(true);
         setAnalysisResult(""); // Clear previous results
-        // Load feature suggestions immediately for quick demo
-        loadFeatureSuggestions();
+        setFeatureSuggestions([]); // Clear suggestions until analysis completes
       }
     } catch (error: any) {
       console.error('Error analyzing repository:', error);
@@ -1321,8 +1351,11 @@ ${getValidationSteps(userTask, language, repoName)}
                   title: "Analysis Complete",
                   description: `Successfully analyzed ${selectedFiles.size} files from ${currentAnalysisRepo?.name}.`,
                 });
-                // Load feature suggestions after analysis completes
-                loadFeatureSuggestions();
+                // Load feature suggestions with the completed analysis
+                setAnalysisResult(prev => {
+                  loadFeatureSuggestions(prev);
+                  return prev;
+                });
               }
             } catch (e) {
               // Skip invalid JSON
@@ -1734,38 +1767,84 @@ ${getValidationSteps(userTask, language, repoName)}
                   {/* Left Panel - File Selection or Feature Suggestions */}
                   <ResizablePanel defaultSize={40} minSize={30}>
                     <div className="h-full flex flex-col p-6 bg-background">
-                      {/* Always show feature suggestions in demo mode */}
-                      <div className="mb-6">
-                        <h2 className="text-xl font-semibold mb-1">Quick Feature Suggestions</h2>
-                        <p className="text-sm text-muted-foreground">
-                          Click any feature to generate an AI prompt
-                        </p>
-                      </div>
+                      {featureSuggestions.length > 0 ? (
+                        <>
+                          <div className="mb-6">
+                            <h2 className="text-xl font-semibold mb-1">Feature Suggestions</h2>
+                            <p className="text-sm text-muted-foreground">
+                              Click any feature to generate an AI prompt
+                            </p>
+                          </div>
 
-                      <ScrollArea className="flex-1">
-                        {isLoadingSuggestions ? (
-                          <div className="flex flex-col items-center justify-center h-full space-y-4">
-                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                            <p className="text-sm text-muted-foreground">Loading suggestions...</p>
+                          <ScrollArea className="flex-1">
+                            <FeatureSuggestions 
+                              suggestions={featureSuggestions}
+                              onSuggestionClick={handleSuggestionClick}
+                              isGenerating={isGenerating}
+                            />
+                          </ScrollArea>
+                        </>
+                      ) : (
+                        <>
+                          <div className="mb-6">
+                            <h2 className="text-xl font-semibold mb-1">Select Files to Analyze</h2>
+                            <p className="text-sm text-muted-foreground">
+                              Choose files for code analysis or select all
+                            </p>
                           </div>
-                        ) : featureSuggestions.length > 0 ? (
-                          <FeatureSuggestions 
-                            suggestions={featureSuggestions}
-                            onSuggestionClick={handleSuggestionClick}
-                            isGenerating={isGenerating}
-                          />
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-full space-y-4 text-center px-4">
-                            <Lightbulb className="w-12 h-12 text-muted-foreground/50" />
-                            <div>
-                              <h3 className="font-semibold mb-2">Loading Features...</h3>
-                              <p className="text-sm text-muted-foreground">
-                                Feature suggestions will appear here
-                              </p>
+
+                          <ScrollArea className="flex-1">
+                            <div className="space-y-4">
+                              {/* File Selection UI */}
+                              <div className="flex items-center justify-between mb-4">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleSelectAll}
+                                >
+                                  {selectedFiles.size === allFiles.length ? 'Deselect All' : 'Select All'}
+                                </Button>
+                                <span className="text-sm text-muted-foreground">
+                                  {selectedFiles.size} of {allFiles.length} files selected
+                                </span>
+                              </div>
+
+                              {Object.entries(repoFiles).map(([folder, files]) => (
+                                <div key={folder} className="mb-4">
+                                  <h3 className="font-semibold mb-2 text-sm">{folder || 'Root'}</h3>
+                                  <div className="space-y-2">
+                                    {files.map((file: any) => (
+                                      <label
+                                        key={file.path}
+                                        className="flex items-center space-x-2 p-2 hover:bg-accent rounded cursor-pointer"
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={selectedFiles.has(file.path)}
+                                          onChange={() => handleFileSelection(file.path)}
+                                          className="rounded"
+                                        />
+                                        <span className="text-sm truncate flex-1">{file.name}</span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {(file.size / 1024).toFixed(1)}KB
+                                        </span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+
+                              <Button
+                                onClick={handleStartAnalysis}
+                                disabled={isAnalyzing || selectedFiles.size === 0}
+                                className="w-full mt-4"
+                              >
+                                {isAnalyzing ? 'Analyzing...' : 'Start Analysis'}
+                              </Button>
                             </div>
-                          </div>
-                        )}
-                      </ScrollArea>
+                          </ScrollArea>
+                        </>
+                      )}
                     </div>
                   </ResizablePanel>
 

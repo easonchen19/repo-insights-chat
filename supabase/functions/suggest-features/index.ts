@@ -35,33 +35,47 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are a product strategist analyzing a codebase. Based on the analysis report, suggest 3-5 impactful features that are missing or could be improved.
+    const systemPrompt = `You are a product strategist and senior engineer. Analyze the code review report and prioritize feature suggestions based on the findings.
 
-Return ONLY a JSON array with this exact structure:
+**Prioritization Rules:**
+1. If CRITICAL security issues found → Prioritize security/auth features
+2. If performance issues found → Prioritize optimization features
+3. If structural issues found → Prioritize refactoring/architecture
+4. If missing core features → Prioritize essential functionality
+5. If polish needed → Prioritize UX/UI improvements
+
+Return ONLY a JSON array (3-5 suggestions) with this exact structure:
 [
   {
     "title": "Add User Authentication",
-    "description": "Implement secure login and signup functionality",
+    "description": "Implement secure login and signup functionality with JWT tokens",
     "priority": "high",
     "category": "Security"
   }
 ]
 
-Categories: Security, UX, Performance, Features, UI, Marketing
+**Categories:** Security, UX, Performance, Features, Architecture, Testing, UI
 
-Priority levels: high, medium, low
+**Priority levels:**
+- high: Critical issues, missing core features, security
+- medium: Important improvements, UX enhancements
+- low: Nice-to-have, polish, minor optimizations
 
-Focus on:
-- Missing critical features (auth, database, API endpoints)
-- UX improvements (testimonials, how it works sections, onboarding)
-- Performance optimizations
-- Marketing features (landing page sections, CTAs)
+Each suggestion must be:
+- Specific and actionable
+- Based on actual findings in the report
+- Implementable as a discrete task`;
 
-Be specific and actionable. Each suggestion should be clear and implementable.`;
-
-    const userPrompt = `Based on this codebase analysis, suggest 3-5 missing features or improvements:
+    const userPrompt = `Based on this senior engineer code review, suggest 3-5 prioritized features/improvements:
 
 ${analysisReport}
+
+Prioritize based on:
+1. Critical/security issues mentioned
+2. Missing core functionality
+3. Architecture/structure problems
+4. Performance bottlenecks
+5. UX improvements
 
 Return ONLY the JSON array, no other text.`;
 
