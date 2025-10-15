@@ -17,6 +17,8 @@ import { useNavigate } from "react-router-dom";
 import { ModelSelector, useModelSelection } from "@/components/ModelSelector";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { FeatureSuggestions } from "@/components/FeatureSuggestions";
+import { ScrollablePanel } from "@/components/ScrollablePanel";
+import { AnalyzerLayout } from "@/components/AnalyzerLayout";
 
 interface Repository {
   id: number;
@@ -1907,9 +1909,6 @@ ${getValidationSteps(userTask, language, repoName)}
                   )
                 }
               />
-            ) : (
-              <>
-                {repositories.length > 0 && (
 
                 <div className="grid gap-4">
                   {filteredRepos.map((repo) => (
@@ -2021,7 +2020,7 @@ ${getValidationSteps(userTask, language, repoName)}
                                         </>
                                       )}
                                     </Button>
-          </div>
+                                  </div>
 
                                   {/* Generated Prompt Section */}
                                   {generatedPrompt && (
@@ -2111,8 +2110,8 @@ ${getValidationSteps(userTask, language, repoName)}
                                          </div>
                                        ))}
                                      </div>
-              </>
-
+                                   </div>
+                                  
                                   <Separator />
                                   
                                   <div className="space-y-3">
@@ -2134,18 +2133,19 @@ ${getValidationSteps(userTask, language, repoName)}
                       </div>
                     </Card>
                   ))}
+                </div>
               </>
             )}
 
-                {repositories.length === 0 && !isLoading && isConnected && (
-                  <Card className="p-12 text-center">
-                    <Github className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No repositories loaded</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Click "Show GitHub Repos" to load your accessible repositories
-                    </p>
-                  </Card>
-                )}
+            {repositories.length === 0 && !isLoading && isConnected && (
+              <Card className="p-12 text-center">
+                <Github className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No repositories loaded</h3>
+                <p className="text-muted-foreground mb-4">
+                  Click "Show GitHub Repos" to load your accessible repositories
+                </p>
+              </Card>
+            )}
 
             {filteredRepos.length === 0 && searchTerm && repositories.length > 0 && !isLoading && (
               <Card className="p-12 text-center">
