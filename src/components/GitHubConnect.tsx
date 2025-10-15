@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { ModelSelector, useModelSelection } from "@/components/ModelSelector";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { FeatureSuggestions } from "@/components/FeatureSuggestions";
+import { ScrollablePanel } from "@/components/ScrollablePanel";
 
 interface Repository {
   id: number;
@@ -1778,7 +1779,7 @@ ${getValidationSteps(userTask, language, repoName)}
                 </Button>
 
                 {/* Two-Panel Layout */}
-                <ResizablePanelGroup direction="horizontal" className="min-h-[600px] rounded-lg border">
+                <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-12rem)] rounded-lg border">
                   {/* Left Panel - File Selection or Feature Suggestions */}
                   <ResizablePanel defaultSize={40} minSize={30}>
                     <div className="h-full flex flex-col p-6 bg-background">
