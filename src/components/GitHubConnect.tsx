@@ -18,6 +18,7 @@ import { ModelSelector, useModelSelection } from "@/components/ModelSelector";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { FeatureSuggestions } from "@/components/FeatureSuggestions";
 import { ScrollablePanel } from "@/components/ScrollablePanel";
+import { AnalyzerLayout } from "@/components/AnalyzerLayout";
 
 interface Repository {
   id: number;
@@ -1630,9 +1631,8 @@ ${getValidationSteps(userTask, language, repoName)}
                   <div className="flex items-center text-sm text-muted-foreground">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
                     Analyzing...
-                  </div>
-                )}
-              </div>
+           </div>
+            )}
 
               {analysis ? (
                 <div className="prose prose-sm max-w-none">
@@ -1756,230 +1756,159 @@ ${getValidationSteps(userTask, language, repoName)}
           <div>
             {/* Two-panel Analysis Mode */}
             {isAnalyzingMode ? (
-              <div className="mb-6">
-                {/* Back Button */}
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsAnalyzingMode(false);
-                    setSelectedFiles(new Set());
-                    setRepoFiles({});
-                    setAllFiles([]);
-                    setCurrentAnalysisRepo(null);
-                    setAnalysisResult("");
-                    setIsAnalyzing(false);
-                    setFeatureSuggestions([]);
-                    setGeneratedPrompt("");
-                    setSelectedSuggestion(null);
-                  }}
-                  className="mb-4"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Repositories
-                </Button>
-
-                {/* Two-Panel Layout */}
-                <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-12rem)] rounded-lg border">
-                  {/* Left Panel - File Selection or Feature Suggestions */}
-                  <ResizablePanel defaultSize={40} minSize={30}>
-                    <div className="h-full flex flex-col p-6 bg-background">
-                      {isGenerating && featureSuggestions.length === 0 ? (
-                        // Loading suggestions state
-                        <>
-                          <div className="mb-6">
-                            <h2 className="text-xl font-semibold mb-1">Generating Suggestions</h2>
-                            <p className="text-sm text-muted-foreground">
-                              Analyzing your code to suggest improvements...
-                            </p>
-                          </div>
-                          
-                          <div className="flex-1 flex items-center justify-center">
-                            <div className="text-center space-y-4">
-                              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                              <p className="text-sm text-muted-foreground">
-                                Creating personalized feature suggestions...
-                              </p>
-                            </div>
-                          </div>
-                        </>
-                      ) : featureSuggestions.length > 0 ? (
-                        // Show suggestions
-                        <>
-                          <div className="mb-6">
-                            <h2 className="text-xl font-semibold mb-1">Feature Suggestions</h2>
-                            <p className="text-sm text-muted-foreground">
-                              Click any feature to generate an AI prompt
-                            </p>
-                          </div>
-
-                          <ScrollArea className="flex-1">
-                            <FeatureSuggestions 
-                              suggestions={featureSuggestions}
-                              onSuggestionClick={handleSuggestionClick}
-                              isGenerating={isGenerating}
-                            />
-                          </ScrollArea>
-                        </>
-                      ) : (
-                        // Show file selection
-                        <>
-                          <div className="mb-6">
-                            <h2 className="text-xl font-semibold mb-1">Select Files to Analyze</h2>
-                            <p className="text-sm text-muted-foreground">
-                              Choose files for code analysis or select all
-                            </p>
-                          </div>
-
-                          <ScrollArea className="flex-1">
-                            <div className="space-y-4">
-                              {/* File Selection UI */}
-                              <div className="flex items-center justify-between mb-4">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleSelectAll(selectedFiles.size !== allFiles.length)}
-                                >
-                                  {selectedFiles.size === allFiles.length ? 'Deselect All' : 'Select All'}
-                                </Button>
-                                <span className="text-sm text-muted-foreground">
-                                  {selectedFiles.size} of {allFiles.length} files selected
-                                </span>
-                              </div>
-
-                              {Object.entries(repoFiles).map(([folder, files]) => (
-                                <div key={folder} className="mb-4">
-                                  <h3 className="font-semibold mb-2 text-sm">{folder || 'Root'}</h3>
-                                  <div className="space-y-2">
-                                    {files.map((file: any) => (
-                                      <label
-                                        key={file.path}
-                                        className="flex items-center space-x-2 p-2 hover:bg-accent rounded cursor-pointer"
-                                      >
-                                        <input
-                                          type="checkbox"
-                                          checked={selectedFiles.has(file.path)}
-                                          onChange={(e) => handleFileSelection(file.path, e.target.checked)}
-                                          className="rounded"
-                                        />
-                                        <span className="text-sm truncate flex-1">{file.name}</span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {(file.size / 1024).toFixed(1)}KB
-                                        </span>
-                                      </label>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-
-                              <Button
-                                onClick={handleStartAnalysis}
-                                disabled={isAnalyzing || selectedFiles.size === 0}
-                                className="w-full mt-4"
-                              >
-                                {isAnalyzing ? 'Analyzing...' : 'Start Analysis'}
-                              </Button>
-                            </div>
-                          </ScrollArea>
-                        </>
-                      )}
-                    </div>
-                  </ResizablePanel>
-
-                  <ResizableHandle withHandle />
-
-                  {/* Right Panel - Analysis Results or Generated Prompt */}
-                  <ResizablePanel defaultSize={60} minSize={40}>
-                    <div className="h-full flex flex-col p-6 bg-muted/20">
-                      <div className="mb-4">
-                        <h2 className="text-xl font-semibold mb-1">
-                          {generatedPrompt ? 'Generated Prompt' : 'Analysis Report'}
-                        </h2>
+              <AnalyzerLayout
+                onBack={() => {
+                  setIsAnalyzingMode(false);
+                  setSelectedFiles(new Set());
+                  setRepoFiles({});
+                  setAllFiles([]);
+                  setCurrentAnalysisRepo(null);
+                  setAnalysisResult("");
+                  setIsAnalyzing(false);
+                  setFeatureSuggestions([]);
+                  setGeneratedPrompt("");
+                  setSelectedSuggestion(null);
+                }}
+                leftPanelHeader={{
+                  title: isGenerating && featureSuggestions.length === 0 
+                    ? "Generating Suggestions"
+                    : featureSuggestions.length > 0 
+                      ? "Feature Suggestions"
+                      : "Select Files to Analyze",
+                  description: isGenerating && featureSuggestions.length === 0
+                    ? "Analyzing your code to suggest improvements..."
+                    : featureSuggestions.length > 0
+                      ? "Click any feature to generate an AI prompt"
+                      : "Choose files for code analysis or select all"
+                }}
+                rightPanelHeader={{
+                  title: generatedPrompt ? 'Generated Prompt' : 'Analysis Report',
+                  description: generatedPrompt 
+                    ? selectedSuggestion?.title || '' 
+                    : isAnalyzing ? 'Analyzing your code...' : analysisResult ? 'Analysis complete' : 'Results will appear here'
+                }}
+                leftPanel={
+                  isGenerating && featureSuggestions.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center space-y-4">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
                         <p className="text-sm text-muted-foreground">
-                          {generatedPrompt 
-                            ? selectedSuggestion?.title 
-                            : isAnalyzing ? 'Analyzing your code...' : analysisResult ? 'Analysis complete' : 'Results will appear here'
-                          }
+                          Creating personalized feature suggestions...
                         </p>
                       </div>
-
-                      <ScrollArea className="flex-1">
-                        {generatedPrompt ? (
-                          // Show Generated Prompt
-                          <div className="space-y-4">
-                            <Card className="p-6 bg-background">
-                              <div className="flex items-start justify-between mb-4">
-                                <div>
-                                  <h3 className="font-semibold text-lg mb-1">{selectedSuggestion?.title}</h3>
-                                  <p className="text-sm text-muted-foreground">{selectedSuggestion?.description}</p>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => copyToClipboard(generatedPrompt)}
-                                >
-                                  <Copy className="w-4 h-4 mr-2" />
-                                  Copy Prompt
-                                </Button>
-                              </div>
-                              
-                              <Separator className="my-4" />
-                              
-                              <div className="prose prose-sm max-w-none">
-                                <pre className="whitespace-pre-wrap bg-muted p-4 rounded-lg text-sm">
-                                  {generatedPrompt}
-                                </pre>
-                              </div>
-                            </Card>
-                            
-                            <Button
-                              variant="ghost"
-                              onClick={() => {
-                                setGeneratedPrompt("");
-                                setSelectedSuggestion(null);
-                              }}
-                              className="w-full"
-                            >
-                              Back to Analysis
-                            </Button>
-                          </div>
-                        ) : analysisResult ? (
-                          // Show Analysis Report
-                          <div className="prose prose-sm max-w-none bg-background p-4 rounded-lg">
-                            {formatAnalysis(analysisResult)}
-                          </div>
-                        ) : isAnalyzing ? (
-                          <div className="text-center py-12">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                            <p className="text-muted-foreground">Analyzing your code...</p>
-                            <p className="text-sm text-muted-foreground mt-2">This may take a few moments</p>
-                          </div>
-                        ) : (
-                          <div className="text-center py-12 text-muted-foreground">
-                            <p>Select files and click "Start Analysis" to begin</p>
-                          </div>
-                        )}
-                      </ScrollArea>
                     </div>
-                  </ResizablePanel>
-                </ResizablePanelGroup>
-              </div>
-            ) : (
-              /* Repository List View */
-              <div>
-
-            {repositories.length > 0 && (
-              <>
-                <div className="mb-6">
-                  <div className="relative max-w-md">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input
-                      placeholder="Search repositories..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
+                  ) : featureSuggestions.length > 0 ? (
+                    <FeatureSuggestions 
+                      suggestions={featureSuggestions}
+                      onSuggestionClick={handleSuggestionClick}
+                      isGenerating={isGenerating}
                     />
-                  </div>
-                </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSelectAll(selectedFiles.size !== allFiles.length)}
+                        >
+                          {selectedFiles.size === allFiles.length ? 'Deselect All' : 'Select All'}
+                        </Button>
+                        <span className="text-sm text-muted-foreground">
+                          {selectedFiles.size} of {allFiles.length} files selected
+                        </span>
+                      </div>
+
+                      {Object.entries(repoFiles).map(([folder, files]) => (
+                        <div key={folder} className="mb-4">
+                          <h3 className="font-semibold mb-2 text-sm">{folder || 'Root'}</h3>
+                          <div className="space-y-2">
+                            {files.map((file: any) => (
+                              <label
+                                key={file.path}
+                                className="flex items-center space-x-2 p-2 hover:bg-accent rounded cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedFiles.has(file.path)}
+                                  onChange={(e) => handleFileSelection(file.path, e.target.checked)}
+                                  className="rounded"
+                                />
+                                <span className="text-sm truncate flex-1">{file.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {(file.size / 1024).toFixed(1)}KB
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+
+                      <Button
+                        onClick={handleStartAnalysis}
+                        disabled={isAnalyzing || selectedFiles.size === 0}
+                        className="w-full mt-4"
+                      >
+                        {isAnalyzing ? 'Analyzing...' : 'Start Analysis'}
+                      </Button>
+                    </div>
+                  )
+                }
+                rightPanel={
+                  generatedPrompt ? (
+                    <div className="space-y-4">
+                      <Card className="p-6 bg-background">
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <h3 className="font-semibold text-lg mb-1">{selectedSuggestion?.title}</h3>
+                            <p className="text-sm text-muted-foreground">{selectedSuggestion?.description}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => copyToClipboard(generatedPrompt)}
+                          >
+                            <Copy className="w-4 h-4 mr-2" />
+                            Copy Prompt
+                          </Button>
+                        </div>
+                        
+                        <Separator className="my-4" />
+                        
+                        <div className="prose prose-sm max-w-none">
+                          <pre className="whitespace-pre-wrap bg-muted p-4 rounded-lg text-sm">
+                            {generatedPrompt}
+                          </pre>
+                        </div>
+                      </Card>
+                      
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setGeneratedPrompt("");
+                          setSelectedSuggestion(null);
+                        }}
+                        className="w-full"
+                      >
+                        Back to Analysis
+                      </Button>
+                    </div>
+                  ) : analysisResult ? (
+                    <div className="prose prose-sm max-w-none bg-background p-4 rounded-lg">
+                      {formatAnalysis(analysisResult)}
+                    </div>
+                  ) : isAnalyzing ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                      <p className="text-muted-foreground">Analyzing your code...</p>
+                      <p className="text-sm text-muted-foreground mt-2">This may take a few moments</p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <p>Select files and click "Start Analysis" to begin</p>
+                    </div>
+                  )
+                }
+              />
 
                 <div className="grid gap-4">
                   {filteredRepos.map((repo) => (
